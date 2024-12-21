@@ -1,0 +1,80 @@
+package build
+
+import $ivy.`com.lihaoyi::mill-contrib-sonatypecentral:`
+
+import mill._
+import mill.scalalib._
+import mill.scalalib.scalafmt._
+import mill.scalalib.publish._
+import mill.main.BuildInfo.millVersion
+import mill.contrib.sonatypecentral.SonatypeCentralPublishModule
+
+object openapi4s extends SbtModule with ScalafmtModule with Openapi4sPublishModule {
+  def scalaVersion = "2.13.15"
+  def ivyDeps = Agg(
+    ivy"ba.sake::regenesca:0.1.0-2-0b01c9-DIRTY54b54e09-SNAPSHOT",
+    ivy"io.swagger.parser.v3:swagger-parser:2.1.24",
+    ivy"org.apache.commons:commons-text:1.12.0",
+    ivy"com.lihaoyi::pprint:0.9.0"
+  )
+
+  object test extends SbtTests with TestModule.Munit {
+    def ivyDeps = Agg(
+      ivy"org.scalameta::munit::1.0.2"
+    )
+  }
+}
+
+object `mill-plugin` extends ScalaModule with ScalafmtModule with Openapi4sPublishModule {
+
+  def scalaVersion = "2.13.15"
+  def scalacOptions = Seq("-Ywarn-unused", "-deprecation")
+  def ivyDeps = Agg(ivy"com.lihaoyi:mill-dist:${millVersion}")
+  def moduleDeps = Seq(openapi4s)
+
+  def artifactName = "mill-openapi4s"
+  def platformSuffix = "_mill" + mill.main.BuildInfo.millBinPlatform
+
+  object test extends ScalaTests with TestModule.Munit {
+    def ivyDeps = Agg(
+      ivy"com.lihaoyi::mill-testkit:$millVersion",
+      ivy"org.scalameta::munit:1.0.2"
+    )
+    def forkEnv = Task {
+        val millAssemblyPath = millExecutable.assembly().path
+        val millExecPath =
+            if (scala.util.Properties.isWin) {
+                val batPath = millAssemblyPath / os.up / (millAssemblyPath.baseName + ".bat")
+                os.copy.over(millAssemblyPath, batPath)
+                batPath.toString
+            }
+            else millAssemblyPath.toString
+      Map("MILL_EXECUTABLE_PATH" -> millExecPath)
+    }
+
+    object millExecutable extends JavaModule {
+      def ivyDeps = Agg(ivy"com.lihaoyi:mill-dist:${millVersion}")
+      def mainClass = Some("mill.runner.client.MillClientMain")
+      def resources = Task {
+        val p = Task.dest / "mill/local-test-overrides" / s"ba.sake-${`mill-plugin`.artifactId()}"
+        os.write(p, `mill-plugin`.localClasspath().map(_.path).mkString("\n"), createFolders = true)
+        Seq(PathRef(Task.dest))
+      }
+    }
+  }
+
+}
+
+trait Openapi4sPublishModule extends SonatypeCentralPublishModule{
+def publishVersion = "0.0.1"
+  def pomSettings = PomSettings(
+    description = "Mill plugin for Openapi4s generator",
+    organization = "ba.sake",
+    url = "https://github.com/sake92/openapi4s",
+    licenses = Seq(License.`Apache-2.0`),
+    versionControl =
+      VersionControl.github(owner = "sake92", repo = "mill-openapi4s"),
+    developers =
+      Seq(Developer("sake92", "Sakib Hadziavdic", "https://github.com/sake92"))
+  )
+}

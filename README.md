@@ -1,2 +1,5 @@
 # openapi4s
-openapi4s
+
+OpenApi generators for Scala.
+
+
