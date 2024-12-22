@@ -37,10 +37,10 @@ class SchemaDefinitionResolver {
       }
       .getOrElse {
         throw new UnsupportedSchemaTypeException(
-          s"Unsupported schema type: ${schema.getClass()}"
+          s"Unsupported schema type: ${schema.getClass}"
         )
       }
-    val nullable = schema.getNullable()
+    val nullable = schema.getNullable
     if (nullable) SchemaDefinition.Opt(baseType)
     else baseType
   }
@@ -58,14 +58,19 @@ class SchemaDefinitionResolver {
         } else {
           val minLength = Option(schema.getMinLength).map(_.intValue)
           val maxLength = Option(schema.getMaxLength).map(_.intValue)
-          SchemaDefinition.Str(defaultValue, minLength=minLength, maxLength=maxLength)
+          val pattern = Option(schema.getPattern)
+          SchemaDefinition.Str(defaultValue, minLength = minLength, maxLength = maxLength, pattern = pattern)
         }
-      // TODO pattern/regex
-      case _: PasswordSchema => // masked
-        SchemaDefinition.Str(defaultValue)
+      case _: PasswordSchema =>
+        val minLength = Option(schema.getMinLength).map(_.intValue)
+        val maxLength = Option(schema.getMaxLength).map(_.intValue)
+        val pattern = Option(schema.getPattern)
+        SchemaDefinition.Password(defaultValue, minLength = minLength, maxLength = maxLength, pattern = pattern)
       case _: EmailSchema =>
-        SchemaDefinition.Str(defaultValue)
-      case _: ByteArraySchema => // base64 encoded
+        val minLength = Option(schema.getMinLength).map(_.intValue)
+        val maxLength = Option(schema.getMaxLength).map(_.intValue)
+        SchemaDefinition.Email(defaultValue, minLength = minLength, maxLength = maxLength)
+      case _: ByteArraySchema =>
         SchemaDefinition.Base64Bytes(defaultValue)
       case _: IntegerSchema =>
         val min = Option(schema.getMinimum)
@@ -96,14 +101,13 @@ class SchemaDefinitionResolver {
   private def resolveArrType(
       schema: Schema[?]
   ): Option[SchemaDefinition.Arr] = {
-    val pf: PartialFunction[Schema[?], SchemaDefinition.Arr] = {
-      case _: ArraySchema =>
-        val arrayItemsSchema = schema.getItems
-        val arrayItemsType = resolveSchema(arrayItemsSchema)
-        val uniqueItems = Option(schema.getUniqueItems).exists(_.booleanValue)
-        val minItems = Option(schema.getMinItems).map(_.intValue)
-        val maxItems = Option(schema.getMaxItems).map(_.intValue)
-        SchemaDefinition.Arr(arrayItemsType,minItems=minItems, maxItems=maxItems,uniqueItems = uniqueItems)
+    val pf: PartialFunction[Schema[?], SchemaDefinition.Arr] = { case _: ArraySchema =>
+      val arrayItemsSchema = schema.getItems
+      val arrayItemsType = resolveSchema(arrayItemsSchema)
+      val uniqueItems = Option(schema.getUniqueItems).exists(_.booleanValue)
+      val minItems = Option(schema.getMinItems).map(_.intValue)
+      val maxItems = Option(schema.getMaxItems).map(_.intValue)
+      SchemaDefinition.Arr(arrayItemsType, minItems = minItems, maxItems = maxItems, uniqueItems = uniqueItems)
     }
     pf.lift(schema)
   }
@@ -113,9 +117,7 @@ class SchemaDefinitionResolver {
   ): Option[SchemaDefinition.Obj] = {
     val pf: PartialFunction[Schema[?], SchemaDefinition.Obj] = { case _: ObjectSchema =>
       val requiredProperties = Option(schema.getRequired).map(_.asScala.toSet).getOrElse(Set.empty)
-      val properties = schema
-        .getProperties()
-        .asScala
+      val properties = schema.getProperties.asScala
         .map { case (propertyKey, property) =>
           val coreSchema = resolveSchema(property)
           val schema = if (requiredProperties(propertyKey)) coreSchema else SchemaDefinition.Opt(coreSchema)

@@ -1,6 +1,5 @@
 package ba.sake.openapi4s
 
-import ba.sake.regenesca.GeneratedFileSource
 import java.nio.file.Path
 import ba.sake.openapi4s.sharaf.SharafGenerator
 
@@ -14,10 +13,10 @@ object OpenApiGenerator {
     "sharaf" -> new SharafGenerator()
   )
 
-  def apply(name: String) = generators.get(name.toLowerCase).getOrElse {
+  def apply(name: String): OpenApiGenerator = generators.getOrElse(name.toLowerCase, {
     val available = generators.keys.map(g => s"'${g}'")
     throw new RuntimeException(s"Unknown generator '${name}'. Available generators: ${available}")
-  }
+  })
 
   case class Config(
       url: String,
