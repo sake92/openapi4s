@@ -117,6 +117,7 @@ class SchemaDefinitionResolver {
   ): Option[SchemaDefinition.Obj] = {
     val pf: PartialFunction[Schema[?], SchemaDefinition.Obj] = { case _: ObjectSchema =>
       val requiredProperties = Option(schema.getRequired).map(_.asScala.toSet).getOrElse(Set.empty)
+      //Option(schema.getOneOf)
       val properties = schema.getProperties.asScala
         .map { case (propertyKey, property) =>
           val coreSchema = resolveSchema(property)

@@ -14,12 +14,12 @@ class SharafGeneratorSuite extends munit.FunSuite {
     val config = OpenApiGenerator.Config(url = openapiFileUrl.toString, baseFolder = Paths.get("app"), basePackage = "pkg")
     val openapiDefinition = OpenApiDefinition.parse(config.url)
     val sources = generator.generateSources(config, openapiDefinition)
-    sources.foreach { source =>
+    /*sources.foreach { source =>
       println("*" * 50)
       print("*" * 20)
       print(source.file.getFileName)
       println("*" * 20)
       println(source.source.syntax)
-    }
+    }*/
   }
 }
