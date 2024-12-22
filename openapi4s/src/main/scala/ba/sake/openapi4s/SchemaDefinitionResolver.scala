@@ -4,6 +4,7 @@ import scala.jdk.CollectionConverters._
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.oas.models.media._
 
+// TODO better naming
 class UnsupportedSchemaTypeException(msg: String) extends RuntimeException(msg)
 
 // https://swagger.io/docs/specification/v3_0/data-models/data-types
@@ -13,14 +14,13 @@ class SchemaDefinitionResolver {
       schemas: Map[String, Schema[?]]
   ): NamedSchemaDefinitions = {
     val schemaDefs = schemas.map { case (schemaKey, schema) =>
-      // must be an Obj !
       val schemaDef = resolveSchema(schema)
-      if (schemaDef.isInstanceOf[SchemaDefinition.Obj])
-        SchemaDefinition.Named(
-          schemaKey,
-          schemaDef.asInstanceOf[SchemaDefinition.Obj]
-        )
-      else throw new UnsupportedSchemaTypeException(s"${schemaDef.getClass}")
+      schemaDef match {
+        case obj: SchemaDefinition.Obj => SchemaDefinition.Named(schemaKey, obj)
+        case arr: SchemaDefinition.Arr => SchemaDefinition.Named(schemaKey, arr)
+        case _ =>
+          throw new UnsupportedSchemaTypeException(s"${schema.getClass}")
+      }
     }.toSeq
     NamedSchemaDefinitions(schemaDefs)
   }
@@ -49,39 +49,46 @@ class SchemaDefinitionResolver {
   private def resolveScalarishType(
       schema: Schema[?]
   ): Option[SchemaDefinition] = {
+    val defaultValue = Option(schema.getDefault).map(_.toString)
     val pf: PartialFunction[Schema[?], SchemaDefinition] = {
       case _: StringSchema =>
         if (schema.getEnum != null) {
           val values = schema.getEnum.asScala.toSeq.map(_.toString)
-          SchemaDefinition.Enum(values)
+          SchemaDefinition.Enum(values, defaultValue)
         } else {
-          SchemaDefinition.Str()
+          val minLength = Option(schema.getMinLength).map(_.intValue)
+          val maxLength = Option(schema.getMaxLength).map(_.intValue)
+          SchemaDefinition.Str(defaultValue, minLength=minLength, maxLength=maxLength)
         }
       // TODO pattern/regex
       case _: PasswordSchema => // masked
-        SchemaDefinition.Str()
+        SchemaDefinition.Str(defaultValue)
       case _: EmailSchema =>
-        SchemaDefinition.Str()
+        SchemaDefinition.Str(defaultValue)
       case _: ByteArraySchema => // base64 encoded
-        // TODO just add a comment, or special type !??
-        SchemaDefinition.Str()
+        SchemaDefinition.Base64Bytes(defaultValue)
       case _: IntegerSchema =>
-        // TODO min/max
-        if (schema.getFormat() == "int32") SchemaDefinition.Int32()
-        else SchemaDefinition.Int64()
+        val min = Option(schema.getMinimum)
+        val max = Option(schema.getMaximum)
+        if (schema.getFormat == "int32")
+          SchemaDefinition.Int32(defaultValue, minimum = min.map(_.intValue), maximum = max.map(_.intValue))
+        else SchemaDefinition.Int64(defaultValue, minimum = min.map(_.longValue), maximum = max.map(_.longValue))
       case _: NumberSchema =>
-        SchemaDefinition.Double() // TODO Float
+        val min = Option(schema.getMinimum)
+        val max = Option(schema.getMaximum)
+        if (schema.getFormat == "float")
+          SchemaDefinition.Num32(defaultValue, minimum = min.map(_.floatValue), maximum = max.map(_.floatValue))
+        else SchemaDefinition.Num64(defaultValue, minimum = min.map(_.doubleValue), maximum = max.map(_.doubleValue))
       case _: BooleanSchema =>
-        SchemaDefinition.Bool()
+        SchemaDefinition.Bool(defaultValue)
       case _: UUIDSchema =>
-        SchemaDefinition.UUID()
+        SchemaDefinition.Uuid(defaultValue)
       case _: DateSchema =>
-        SchemaDefinition.Date()
+        SchemaDefinition.Date(defaultValue)
       case _: DateTimeSchema =>
-        SchemaDefinition.DateTime()
+        SchemaDefinition.DateTime(defaultValue)
       // TODO  file, with multipart forms!...
       // case _: BinarySchema =>
-
     }
     pf.lift(schema)
   }
@@ -90,11 +97,13 @@ class SchemaDefinitionResolver {
       schema: Schema[?]
   ): Option[SchemaDefinition.Arr] = {
     val pf: PartialFunction[Schema[?], SchemaDefinition.Arr] = {
-      // TODO minItems/maxItems, uniqueItems->Set??
       case _: ArraySchema =>
-        val arrayItemsSchema = schema.getItems()
+        val arrayItemsSchema = schema.getItems
         val arrayItemsType = resolveSchema(arrayItemsSchema)
-        SchemaDefinition.Arr(arrayItemsType)
+        val uniqueItems = Option(schema.getUniqueItems).exists(_.booleanValue)
+        val minItems = Option(schema.getMinItems).map(_.intValue)
+        val maxItems = Option(schema.getMaxItems).map(_.intValue)
+        SchemaDefinition.Arr(arrayItemsType,minItems=minItems, maxItems=maxItems,uniqueItems = uniqueItems)
     }
     pf.lift(schema)
   }

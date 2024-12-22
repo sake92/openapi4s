@@ -9,6 +9,7 @@ case class OpenApiDefinition(
 )
 
 object OpenApiDefinition {
+
   def parse(url: String): OpenApiDefinition = {
     val result = new OpenAPIParser().readLocation(url, null, null)
     val openApi = result.getOpenAPI

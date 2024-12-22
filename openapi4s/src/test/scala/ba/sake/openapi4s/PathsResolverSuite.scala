@@ -5,7 +5,7 @@ import io.swagger.parser.OpenAPIParser
 
 class PathsResolverSuite extends munit.FunSuite {
 
-  test("resolveNamedSchemas should resolve named schemas") {
+  test("resolve should resolve path definitions") {
     val openapi = new OpenAPIParser().readLocation("./petstore.json", null, null).getOpenAPI
     val schemaDefinitionResolver = new SchemaDefinitionResolver()
     val pathsResolver = new PathsResolver(schemaDefinitionResolver)

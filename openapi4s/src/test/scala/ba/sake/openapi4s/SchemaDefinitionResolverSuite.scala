@@ -16,10 +16,6 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
       namedSchemaDefinitions.defs.map(_.name),
       Seq("Pet", "Category", "Address", "User", "Order", "ApiResponse", "Tag", "Customer")
     )
-
-    pprint.pprintln(
-namedSchemaDefinitions
-    )
   }
 
 }
