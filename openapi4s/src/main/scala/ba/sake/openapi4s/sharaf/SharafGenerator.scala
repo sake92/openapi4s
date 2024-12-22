@@ -149,10 +149,10 @@ class SharafGenerator extends OpenApiGenerator {
         // enums defined in-place, we invent a new name for them..
         val adHocEnums = obj.properties.flatMap { property =>
           val enumValuesOpt = property.schema match {
-            case SchemaDefinition.Enum(values, _)                       => Some(values)
-            case SchemaDefinition.Opt(SchemaDefinition.Enum(values, _)) => Some(values)
-            case SchemaDefinition.Arr(SchemaDefinition.Enum(values, _)) => Some(values)
-            case _                                                      => None
+            case SchemaDefinition.Enum(values, _)                                => Some(values)
+            case SchemaDefinition.Opt(SchemaDefinition.Enum(values, _))          => Some(values)
+            case SchemaDefinition.Arr(SchemaDefinition.Enum(values, _), _, _, _) => Some(values)
+            case _                                                               => None
           }
           enumValuesOpt.flatMap { values =>
             val adhocEnumName = generateEnumName(namedSchemaDef.name, property.name)
@@ -270,7 +270,7 @@ class SharafGenerator extends OpenApiGenerator {
             """
           )
         )
-      case SchemaDefinition.Arr(_) =>
+      case _: SchemaDefinition.Arr =>
         // TODO type alias ???
         Seq.empty
     }
@@ -284,6 +284,8 @@ class SharafGenerator extends OpenApiGenerator {
       allowNullable: Boolean = true
   ): Type = schemaDef match {
     case _: SchemaDefinition.Str         => t"String"
+    case _: SchemaDefinition.Password    => t"String"
+    case _: SchemaDefinition.Email       => t"String"
     case _: SchemaDefinition.Base64Bytes => t"String" // TODO use some kind of newtype.. ?
     case _: SchemaDefinition.Int32       => t"Int"
     case _: SchemaDefinition.Int64       => t"Long"
@@ -310,7 +312,7 @@ class SharafGenerator extends OpenApiGenerator {
       }
     case SchemaDefinition.Ref(name)      => Type.Name(name)
     case SchemaDefinition.Named(name, _) => Type.Name(name)
-    case SchemaDefinition.Obj(name)      => throw new RuntimeException(s"Cannot make up an ad hoc type for 'object'")
+    case SchemaDefinition.Obj(_)         => throw new RuntimeException(s"Cannot make up an ad hoc type for 'object'")
   }
 
   private def generateEnumName(parentType: String, propName: String): String = {

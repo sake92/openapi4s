@@ -22,10 +22,10 @@ class OpenApiDefinitionSuite extends munit.FunSuite {
         Obj(
           List(
             SchemaProperty("id", Opt(Int64(None, None, None))),
-            SchemaProperty("name", Str(None)),
+            SchemaProperty("name", Str(None, None, None, None)),
             SchemaProperty("category", Opt(Ref("Category"))),
-            SchemaProperty("photoUrls", Arr(Str(None))),
-            SchemaProperty("tags", Opt(Arr(Ref("Tag")))),
+            SchemaProperty("photoUrls", Arr(Str(None, None, None, None), None, None, uniqueItems = false)),
+            SchemaProperty("tags", Opt(Arr(Ref("Tag"), None, None, uniqueItems = false))),
             SchemaProperty("status", Opt(Enum(List("available", "pending", "sold"), None)))
           )
         )
@@ -46,7 +46,7 @@ class OpenApiDefinitionSuite extends munit.FunSuite {
           )
         ),
         reqBody = None,
-        resBody = Some(ResBodyDefinition(Arr(Ref("Pet")))),
+        resBody = Some(ResBodyDefinition(Arr(Ref("Pet"), None, None, false))),
         tags = List("pet"),
         summary = "Finds Pets by status",
         description = "Multiple status values can be provided with comma separated strings",
