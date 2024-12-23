@@ -4,7 +4,7 @@ case class NamedSchemaDefinitions(
     defs: Seq[SchemaDefinition.Named]
 )
 
-trait NameableSchemaDefinition // marker trait
+trait NameableSchemaDefinition extends SchemaDefinition // marker trait
 
 sealed abstract class SchemaDefinition
 object SchemaDefinition {
@@ -23,14 +23,14 @@ object SchemaDefinition {
   case class Date(default: Option[String]) extends SchemaDefinition
   case class DateTime(default: Option[String]) extends SchemaDefinition
   case class Opt(schema: SchemaDefinition) extends SchemaDefinition
-  case class Obj(properties: Seq[SchemaProperty]) extends SchemaDefinition with NameableSchemaDefinition
-  case class Enum(values: Seq[String], default: Option[String]) extends SchemaDefinition with NameableSchemaDefinition
-  case class Arr(schema: SchemaDefinition, minItems: Option[Int], maxItems: Option[Int], uniqueItems: Boolean)
-      extends SchemaDefinition
-      with NameableSchemaDefinition
-  case class Ref(name: String) extends SchemaDefinition // reference to Obj
-  // TODO treat is as a type alias ???
+  case class Ref(name: String) extends SchemaDefinition
+  // invented here
   case class Named(name: String, schema: NameableSchemaDefinition) extends SchemaDefinition
+  case class Obj(properties: Seq[SchemaProperty]) extends NameableSchemaDefinition
+  case class Enum(values: Seq[String], default: Option[String]) extends NameableSchemaDefinition
+  case class Arr(schema: SchemaDefinition, minItems: Option[Int], maxItems: Option[Int], uniqueItems: Boolean)
+      extends NameableSchemaDefinition
+  case class OneOf(schemas: Seq[SchemaDefinition]) extends NameableSchemaDefinition
 }
 
 case class SchemaProperty(name: String, schema: SchemaDefinition)

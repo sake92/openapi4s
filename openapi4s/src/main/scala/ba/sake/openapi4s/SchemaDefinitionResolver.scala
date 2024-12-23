@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.media._
 class UnsupportedSchemaTypeException(msg: String) extends RuntimeException(msg)
 
 // https://swagger.io/docs/specification/v3_0/data-models/data-types
+// https://github.com/swagger-api/swagger-core/tree/v2.2.27/modules/swagger-models/src/main/java/io/swagger/v3/oas/models/media
 class SchemaDefinitionResolver {
 
   def resolveNamedSchemas(
@@ -16,10 +17,11 @@ class SchemaDefinitionResolver {
     val schemaDefs = schemas.map { case (schemaKey, schema) =>
       val schemaDef = resolveSchema(schema)
       schemaDef match {
-        case obj: SchemaDefinition.Obj => SchemaDefinition.Named(schemaKey, obj)
-        case arr: SchemaDefinition.Arr => SchemaDefinition.Named(schemaKey, arr)
-        case _ =>
-          throw new UnsupportedSchemaTypeException(s"${schema.getClass}")
+        case obj: SchemaDefinition.Obj     => SchemaDefinition.Named(schemaKey, obj)
+        case enm: SchemaDefinition.Enum    => SchemaDefinition.Named(schemaKey, enm)
+        case arr: SchemaDefinition.Arr     => SchemaDefinition.Named(schemaKey, arr)
+        case oneOf: SchemaDefinition.OneOf => SchemaDefinition.Named(schemaKey, oneOf)
+        case _                             => throw new UnsupportedSchemaTypeException(s"${schema.getClass}")
       }
     }.toSeq
     NamedSchemaDefinitions(schemaDefs)
@@ -45,7 +47,6 @@ class SchemaDefinitionResolver {
     else baseType
   }
 
-  // https://github.com/swagger-api/swagger-core/tree/v2.2.27/modules/swagger-models/src/main/java/io/swagger/v3/oas/models/media
   private def resolveScalarishType(
       schema: Schema[?]
   ): Option[SchemaDefinition] = {
@@ -114,19 +115,23 @@ class SchemaDefinitionResolver {
 
   private def resolveObjType(
       schema: Schema[?]
-  ): Option[SchemaDefinition.Obj] = {
-    val pf: PartialFunction[Schema[?], SchemaDefinition.Obj] = { case _: ObjectSchema =>
-      val requiredProperties = Option(schema.getRequired).map(_.asScala.toSet).getOrElse(Set.empty)
-      //Option(schema.getOneOf)
-      val properties = schema.getProperties.asScala
-        .map { case (propertyKey, property) =>
-          val coreSchema = resolveSchema(property)
-          val schema = if (requiredProperties(propertyKey)) coreSchema else SchemaDefinition.Opt(coreSchema)
-          SchemaProperty(propertyKey, schema)
-        }
-        .toSeq
-        .distinct
-      SchemaDefinition.Obj(properties)
+  ): Option[SchemaDefinition] = {
+    val pf: PartialFunction[Schema[?], SchemaDefinition] = {
+      case _: ObjectSchema =>
+        val requiredProperties = Option(schema.getRequired).map(_.asScala.toSet).getOrElse(Set.empty)
+        val properties = schema.getProperties.asScala
+          .map { case (propertyKey, property) =>
+            val coreSchema = resolveSchema(property)
+            val schema = if (requiredProperties(propertyKey)) coreSchema else SchemaDefinition.Opt(coreSchema)
+            SchemaProperty(propertyKey, schema)
+          }
+          .toSeq
+          .distinct
+        SchemaDefinition.Obj(properties)
+      case _: ComposedSchema =>
+        val oneOfSchemas = schema.getOneOf.asScala.toSeq
+        val schemas = oneOfSchemas.map(resolveSchema)
+        SchemaDefinition.OneOf(schemas)
     }
     pf.lift(schema)
   }

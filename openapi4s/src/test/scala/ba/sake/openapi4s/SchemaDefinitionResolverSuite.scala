@@ -6,8 +6,8 @@ import ba.sake.openapi4s.SchemaDefinition._
 
 class SchemaDefinitionResolverSuite extends munit.FunSuite {
 
-  test("SchemaDefinitionResolver should resolve named schemas") {
-    val openApiDefinition = OpenApiDefinition.parse("petstore.json")
+  test("SchemaDefinitionResolver should resolve petstore.json named schemas") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "petstore.json"))
     // pprint.pprintln(openApiDefinition)
     assertEquals(
       openApiDefinition.namedSchemaDefinitions.defs.map(_.name),
@@ -30,6 +30,11 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
         )
       )
     )
+  }
+
+  test("SchemaDefinitionResolver should resolve oneOf.yaml named schemas") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "oneOf.yaml"))
+    pprint.pprintln(openApiDefinition)
   }
 
 }

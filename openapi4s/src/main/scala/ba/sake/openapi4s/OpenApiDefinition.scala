@@ -13,14 +13,16 @@ object OpenApiDefinition {
   def parse(url: String): OpenApiDefinition = {
     val result = new OpenAPIParser().readLocation(url, null, null)
     val openApi = result.getOpenAPI
-    val errorMessages = result.getMessages
-    if (errorMessages != null) {
-      errorMessages.forEach(println)
-    }
+    val errorMessagesOpt = Option (result.getMessages).map(_.asScala.toSeq).filterNot(_.isEmpty)
 
     if (openApi == null) {
-      throw new RuntimeException(s"OpenAPI definition at '${url}' is not valid")
+      val msgs = errorMessagesOpt.getOrElse(Seq.empty).mkString("; ")
+      throw new RuntimeException(s"OpenAPI definition at '${url}' is not valid: ${msgs}")
     } else {
+      errorMessagesOpt.foreach {errorMessages =>
+        val msgs = errorMessages.mkString("; ")
+        println( s"OpenAPI definition at '${url}' had issues: ${msgs}")
+      }
       val schemaDefinitionResolver = new SchemaDefinitionResolver()
       val namedSchemaDefinitions = Option(openApi.getComponents) match {
         case Some(components) =>
