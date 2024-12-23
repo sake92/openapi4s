@@ -9,6 +9,8 @@ import mill.scalalib.publish._
 import mill.main.BuildInfo.millVersion
 import mill.contrib.sonatypecentral.SonatypeCentralPublishModule
 
+val openapi4sVersion = "0.0.1-SNAPSHOT"
+
 object openapi4s extends SbtModule with ScalafmtModule with Openapi4sPublishModule {
   def scalaVersion = "2.13.15"
   def ivyDeps = Agg(
@@ -41,14 +43,13 @@ object `mill-plugin` extends ScalaModule with ScalafmtModule with Openapi4sPubli
       ivy"org.scalameta::munit:1.0.2"
     )
     def forkEnv = Task {
-        val millAssemblyPath = millExecutable.assembly().path
-        val millExecPath =
-            if (scala.util.Properties.isWin) {
-                val batPath = millAssemblyPath / os.up / (millAssemblyPath.baseName + ".bat")
-                os.copy.over(millAssemblyPath, batPath)
-                batPath.toString
-            }
-            else millAssemblyPath.toString
+      val millAssemblyPath = millExecutable.assembly().path
+      val millExecPath =
+        if (scala.util.Properties.isWin) {
+          val batPath = millAssemblyPath / os.up / (millAssemblyPath.baseName + ".bat")
+          os.copy.over(millAssemblyPath, batPath)
+          batPath.toString
+        } else millAssemblyPath.toString
       Map("MILL_EXECUTABLE_PATH" -> millExecPath)
     }
 
@@ -65,16 +66,14 @@ object `mill-plugin` extends ScalaModule with ScalafmtModule with Openapi4sPubli
 
 }
 
-trait Openapi4sPublishModule extends SonatypeCentralPublishModule{
-def publishVersion = "0.0.1"
+trait Openapi4sPublishModule extends SonatypeCentralPublishModule {
+  def publishVersion = openapi4sVersion
   def pomSettings = PomSettings(
     description = "Mill plugin for Openapi4s generator",
     organization = "ba.sake",
     url = "https://github.com/sake92/openapi4s",
     licenses = Seq(License.`Apache-2.0`),
-    versionControl =
-      VersionControl.github(owner = "sake92", repo = "mill-openapi4s"),
-    developers =
-      Seq(Developer("sake92", "Sakib Hadziavdic", "https://github.com/sake92"))
+    versionControl = VersionControl.github(owner = "sake92", repo = "mill-openapi4s"),
+    developers = Seq(Developer("sake92", "Sakib Hadziavdic", "https://github.com/sake92"))
   )
 }
