@@ -6,7 +6,21 @@ import io.swagger.parser.OpenAPIParser
 case class OpenApiDefinition(
     namedSchemaDefinitions: NamedSchemaDefinitions,
     pathDefinitions: PathDefinitions
-)
+) {
+  // make OneOf-s come first!
+  def normalized : OpenApiDefinition = {
+    val sortedDefs = namedSchemaDefinitions.defs.sortWith{ (a,b) =>
+      (a.schema,b.schema) match {
+        case (_: SchemaDefinition.OneOf,_) => true
+        //case (_, _: SchemaDefinition.OneOf) => true
+        case _ => false
+      }
+    }
+    this.copy(
+      namedSchemaDefinitions = namedSchemaDefinitions.copy(defs = sortedDefs)
+    )
+  }
+}
 
 object OpenApiDefinition {
 
@@ -32,7 +46,7 @@ object OpenApiDefinition {
       }
       val pathsResolver = new PathsResolver(schemaDefinitionResolver)
       val pathDefinitions = pathsResolver.resolve(openApi.getPaths)
-      OpenApiDefinition(namedSchemaDefinitions, pathDefinitions)
+      OpenApiDefinition(namedSchemaDefinitions, pathDefinitions).normalized
     }
   }
 }

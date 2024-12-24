@@ -17,10 +17,6 @@ paths:
 
 components:
   schemas:
-    Pet:
-      oneOf:
-        - $ref: "#/components/schemas/Cat"
-        - $ref: "#/components/schemas/Dog"
     Dog:
       type: object
       properties:
@@ -36,3 +32,9 @@ components:
           type: boolean
         age:
           type: integer
+    Pet:
+      oneOf:
+        - $ref: "#/components/schemas/Cat"
+        - $ref: "#/components/schemas/Dog"
+      discriminator:
+        propertyName: pet_type

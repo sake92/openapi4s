@@ -18,8 +18,8 @@ trait OpenapiGeneratorModule extends JavaModule {
       baseFolder = openapi4sTargetDir().wrapped,
       basePackage = openapi4sPackage()
     )
-    val generator = OpenApiGenerator(openapi4sGenerator())
-    generator.generate(config)
+    val generator = OpenApiGenerator(openapi4sGenerator(), config)
+    generator.generate()
     println("Finished generating openapi sources")
   }
 

@@ -4,19 +4,18 @@ import java.nio.file.Path
 import ba.sake.openapi4s.sharaf.SharafGenerator
 
 trait OpenApiGenerator {
-  def generate(config: OpenApiGenerator.Config): Unit
+  def generate(): Unit
 }
 
 object OpenApiGenerator {
 
-  private val generators = Map(
-    "sharaf" -> new SharafGenerator()
-  )
-
-  def apply(name: String): OpenApiGenerator = generators.getOrElse(name.toLowerCase, {
-    val available = generators.keys.map(g => s"'${g}'")
-    throw new RuntimeException(s"Unknown generator '${name}'. Available generators: ${available}")
-  })
+  def apply(name: String, config: Config): OpenApiGenerator = {
+    val openapiDefinition = OpenApiDefinition.parse(config.url)
+    name.toLowerCase match {
+      case "sharaf" => new SharafGenerator(config, openapiDefinition)
+      case other    => throw new RuntimeException(s"Unknown generator '${other}'. Available generators: 'sharaf'")
+    }
+  }
 
   case class Config(
       url: String,

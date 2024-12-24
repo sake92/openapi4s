@@ -7,39 +7,50 @@ import scala.meta.dialects.Scala34
 import org.apache.commons.text.CaseUtils
 import ba.sake.regenesca._
 
-class SharafGenerator extends OpenApiGenerator {
+class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenApiDefinition) extends OpenApiGenerator {
 
   private val merger = SourceMerger(mergeDefBody = true)
   private val regenescaGenerator = RegenescaGenerator(merger)
 
-  override def generate(config: OpenApiGenerator.Config): Unit = {
+  // keep track of done schemas (to avoid generating a subtype multiple times)
+  private var generatedNamedSchemas = Set.empty[String]
+
+  override def generate(): Unit = {
     println(s"Started generating openapi '${config.url}' server into '${config.baseFolder}' ...")
-    val openapiDefinition = OpenApiDefinition.parse(config.url)
     val packagePath = config.basePackage.replaceAll("\\.", "/")
-    val genSourceFiles = generateSources(config, openapiDefinition)
-    val adaptedGenSourceFiles = genSourceFiles.map { gsf =>
+    val adaptedGenSourceFiles = generateSources.map { gsf =>
       gsf.copy(file = config.baseFolder.resolve(packagePath).resolve(gsf.file.toString))
     }
     regenescaGenerator.generate(adaptedGenSourceFiles)
     println(s"Finished generating openapi '${config.url}' server.")
   }
 
-  private[sharaf] def generateSources(
-      config: OpenApiGenerator.Config,
-      openapiDefinition: OpenApiDefinition
-  ): Seq[GeneratedFileSource] = {
-    val modelSources = openapiDefinition.namedSchemaDefinitions.defs
-      .flatMap(generateModelSources(config, _))
-    val controllerSources = generateControllerSources(config, openapiDefinition.pathDefinitions.defs)
-    modelSources ++ controllerSources
+  private[sharaf] def generateSources: Seq[GeneratedFileSource] = {
+    val modelsPkg = generatePkgSelect(s"${config.basePackage}.models")
+    val modelImports = List[Import](
+      q"import java.time.*",
+      q"import java.util.UUID",
+      q"import ba.sake.tupson.JsonRW",
+      q"import ba.sake.validson.Validator"
+    )
+    val modelFileSources = openapiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
+      val namedSchemaName = namedSchemaDef.name.capitalize
+      val modelSources = generateModelSources(namedSchemaDef)
+      val allStmts = modelImports ++ modelSources
+      Option.when(modelSources.nonEmpty) {
+        GeneratedFileSource(
+          Paths.get(s"models/${namedSchemaName}.scala"),
+          source""" package ${modelsPkg} { ..${allStmts} } """
+        )
+      }
+    }
+    val controllerFileSources = generateControllerSources
+    modelFileSources ++ controllerFileSources
   }
 
-  private def generateControllerSources(
-      config: OpenApiGenerator.Config,
-      pathDefs: Seq[PathDefinition]
-  ): Seq[GeneratedFileSource] = {
+  private def generateControllerSources: List[GeneratedFileSource] = {
     // TODO group by first tag, or "default" (main controller)
-    val casesnel = pathDefs.map { pathDef =>
+    val casesnel = openapiDefinition.pathDefinitions.defs.map { pathDef =>
       val pathSegmentPatterns = pathDef.pathSegments.map {
         case PathSegment.Literal(value) => Lit.String(value)
         case PathSegment.Param(name, schema) =>
@@ -113,7 +124,7 @@ class SharafGenerator extends OpenApiGenerator {
         q"import ..${List(importer)}"
       }
     )
-    Seq(
+    List(
       GeneratedFileSource(
         Paths.get(s"controllers/MainController.scala"),
         source"""
@@ -129,20 +140,19 @@ class SharafGenerator extends OpenApiGenerator {
     )
   }
 
-  private def generateModelSources(
-      config: OpenApiGenerator.Config,
-      namedSchemaDef: SchemaDefinition.Named
-  ): Seq[GeneratedFileSource] = {
-    val typeName = Type.Name(namedSchemaDef.name.capitalize)
-    val termName = Term.Name(namedSchemaDef.name.capitalize)
-    val pkg = generatePkgSelect(s"${config.basePackage}.models")
-    namedSchemaDef.schema match {
+  private def generateModelSources(namedSchemaDef: SchemaDefinition.Named): List[Stat] = {
+    val namedSchemaName = namedSchemaDef.name.capitalize
+    if (generatedNamedSchemas(namedSchemaName)) return List.empty
+    val typeName = Type.Name(namedSchemaName)
+    val termName = Term.Name(namedSchemaName)
+
+    val generatedModelSources = namedSchemaDef.schema match {
       case obj: SchemaDefinition.Obj =>
         val params = obj.properties.map { property =>
           val propertyTpe = resolveType(
             property.schema,
             Some(property.name),
-            Some(namedSchemaDef.name)
+            Some(namedSchemaName)
           )
           param"${Term.Name(property.name)}: ${propertyTpe}"
         }
@@ -155,26 +165,16 @@ class SharafGenerator extends OpenApiGenerator {
             case _                                                               => None
           }
           enumValuesOpt.flatMap { values =>
-            val adhocEnumName = generateEnumName(namedSchemaDef.name, property.name)
+            val adhocEnumName = generateEnumName(namedSchemaName, property.name)
             val adhocEnumType = Type.Name(adhocEnumName)
             val enumCaseDefs = Defn.RepeatedEnumCase(
               List.empty,
-              values.toList.map { enumDefCaseValue =>
+              values.map { enumDefCaseValue =>
                 Term.Name(enumDefCaseValue)
               }
             )
             Some(
-              GeneratedFileSource(
-                Paths.get(s"models/${adhocEnumName}.scala"),
-                source"""
-                    package ${pkg} {
-                        import ba.sake.tupson.JsonRW
-                        enum ${adhocEnumType} derives JsonRW {
-                            ${enumCaseDefs}
-                        }
-                    }
-                    """
-              )
+              q""" enum ${adhocEnumType} derives JsonRW { ${enumCaseDefs} }"""
             )
           }
         }
@@ -183,37 +183,37 @@ class SharafGenerator extends OpenApiGenerator {
           val propName = Term.Name(property.name)
           property.schema match {
             case int: SchemaDefinition.Int32 =>
-              Seq(
+              List(
                 int.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Int(min)) },
                 int.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Int(max)) }
               ).flatten
             case long: SchemaDefinition.Int64 =>
-              Seq(
+              List(
                 long.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Long(min)) },
                 long.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Long(max)) }
               ).flatten
             case float: SchemaDefinition.Num32 =>
-              Seq(
+              List(
                 float.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Float(min)) },
                 float.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Float(max)) }
               ).flatten
             case double: SchemaDefinition.Num64 =>
-              Seq(
+              List(
                 double.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Double(min)) },
                 double.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Double(max)) }
               ).flatten
             case str: SchemaDefinition.Str =>
-              Seq(
+              List(
                 str.minLength.map { min => "minLength" -> List(q"_.${propName}", Lit.Int(min)) },
                 str.maxLength.map { max => "maxLength" -> List(q"_.${propName}", Lit.Int(max)) },
                 str.pattern.map { pattern => "matches" -> List(q"_.${propName}", Lit.String(pattern)) }
               ).flatten
             case arr: SchemaDefinition.Arr =>
-              Seq(
+              List(
                 arr.minItems.map { min => "minLength" -> List(q"_.${propName}", Lit.Int(min)) },
                 arr.maxItems.map { max => "maxLength" -> List(q"_.${propName}", Lit.Int(max)) }
               ).flatten
-            case _ => Seq.empty
+            case _ => List.empty
           }
         }
         val objectStmts = Option
@@ -229,51 +229,51 @@ class SharafGenerator extends OpenApiGenerator {
           }
           .toList
 
-        Seq(
-          GeneratedFileSource(
-            Paths.get(s"models/${namedSchemaDef.name}.scala"),
-            source"""
-            package ${pkg} {
-                import java.time.*
-                import java.util.UUID
-                import ba.sake.tupson.JsonRW
-                import ba.sake.validson.Validator
-
-                case class ${typeName}(
-                ..${Term.ParamClause(params.toList)}
-                ) derives JsonRW
-
-                object ${termName} {
-                    ..${objectStmts}
-                }
-            }
-            """
-          )
-        ) ++ adHocEnums
+        val modelDefStats = List(
+          q"""
+          case class ${typeName}(
+            ..${Term.ParamClause(params.toList)}
+          ) derives JsonRW
+          """,
+          q"""
+          object ${termName} {
+            ..${objectStmts}
+          }
+          """
+        )
+        modelDefStats ++ adHocEnums
       case enumDef: SchemaDefinition.Enum =>
         val enumCaseDefs = Defn.RepeatedEnumCase(
           List.empty,
-          enumDef.values.toList.map { enumDefCaseValue =>
+          enumDef.values.map { enumDefCaseValue =>
             Term.Name(enumDefCaseValue)
           }
         )
-        Seq(
-          GeneratedFileSource(
-            Paths.get(s"models/${namedSchemaDef.name}.scala"),
-            source"""
-            package ${pkg} {
-                import ba.sake.tupson.JsonRW
-                enum ${typeName} derives JsonRW {
-                    ${enumCaseDefs}
-                }
-            }
-            """
-          )
+        List(
+          q"""enum ${typeName} derives JsonRW { ${enumCaseDefs} } """
         )
       case _: SchemaDefinition.Arr =>
         // TODO type alias ???
-        Seq.empty
+        List.empty
+      case oneOfSchema: SchemaDefinition.OneOf =>
+        val oneOfCases = oneOfSchema.schemas.flatMap {
+          case SchemaDefinition.Ref(refName) =>
+            openapiDefinition.namedSchemaDefinitions.defs.find(_.name == refName) match {
+              case Some(referencedNamedSchema) => generateModelSources(referencedNamedSchema)
+              case None => throw new RuntimeException(s"Non-existing sub-schema type: '${refName}'")
+            }
+          case other => throw new RuntimeException(s"Unsupported oneOf sub-schema type: '${other.getClass}'")
+        }
+        List(
+          q"""
+          @discriminator(${Lit.String(oneOfSchema.discriminatorPropertyName)})
+          sealed trait ${typeName}
+          """,
+          q"""  object ${termName} { ..${oneOfCases} } """
+        )
     }
+    generatedNamedSchemas += namedSchemaName
+    generatedModelSources
   }
 
   private def resolveType(
@@ -313,6 +313,7 @@ class SharafGenerator extends OpenApiGenerator {
     case SchemaDefinition.Ref(name)      => Type.Name(name)
     case SchemaDefinition.Named(name, _) => Type.Name(name)
     case SchemaDefinition.Obj(_)         => throw new RuntimeException(s"Cannot make up an ad hoc type for 'object'")
+    case _: SchemaDefinition.OneOf       => throw new RuntimeException(s"Cannot make up an ad hoc type for 'oneOf'")
   }
 
   private def generateEnumName(parentType: String, propName: String): String = {

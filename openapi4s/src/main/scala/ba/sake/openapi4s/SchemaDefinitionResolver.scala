@@ -23,7 +23,7 @@ class SchemaDefinitionResolver {
         case oneOf: SchemaDefinition.OneOf => SchemaDefinition.Named(schemaKey, oneOf)
         case _                             => throw new UnsupportedSchemaTypeException(s"${schema.getClass}")
       }
-    }.toSeq
+    }.toList
     NamedSchemaDefinitions(schemaDefs)
   }
 
@@ -54,7 +54,7 @@ class SchemaDefinitionResolver {
     val pf: PartialFunction[Schema[?], SchemaDefinition] = {
       case _: StringSchema =>
         if (schema.getEnum != null) {
-          val values = schema.getEnum.asScala.toSeq.map(_.toString)
+          val values = schema.getEnum.asScala.toList.map(_.toString)
           SchemaDefinition.Enum(values, defaultValue)
         } else {
           val minLength = Option(schema.getMinLength).map(_.intValue)
@@ -125,13 +125,18 @@ class SchemaDefinitionResolver {
             val schema = if (requiredProperties(propertyKey)) coreSchema else SchemaDefinition.Opt(coreSchema)
             SchemaProperty(propertyKey, schema)
           }
-          .toSeq
+          .toList
           .distinct
         SchemaDefinition.Obj(properties)
       case _: ComposedSchema =>
-        val oneOfSchemas = schema.getOneOf.asScala.toSeq
-        val schemas = oneOfSchemas.map(resolveSchema)
-        SchemaDefinition.OneOf(schemas)
+        val schemas = schema.getOneOf.asScala.toList.map(resolveSchema)
+        val discriminator = Option(schema.getDiscriminator).getOrElse {
+          throw new RuntimeException("a oneOf schema must have a discriminator")
+        }
+        val discriminatorPropertyName = Option(discriminator.getPropertyName).getOrElse {
+          throw new RuntimeException("A oneOf schema must have a discriminator property name")
+        }
+        SchemaDefinition.OneOf(schemas, discriminatorPropertyName = discriminatorPropertyName)
     }
     pf.lift(schema)
   }

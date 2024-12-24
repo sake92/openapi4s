@@ -26,11 +26,11 @@ object SchemaDefinition {
   case class Ref(name: String) extends SchemaDefinition
   // invented here
   case class Named(name: String, schema: NameableSchemaDefinition) extends SchemaDefinition
-  case class Obj(properties: Seq[SchemaProperty]) extends NameableSchemaDefinition
-  case class Enum(values: Seq[String], default: Option[String]) extends NameableSchemaDefinition
+  case class Obj(properties: List[SchemaProperty]) extends NameableSchemaDefinition
+  case class Enum(values: List[String], default: Option[String]) extends NameableSchemaDefinition
   case class Arr(schema: SchemaDefinition, minItems: Option[Int], maxItems: Option[Int], uniqueItems: Boolean)
       extends NameableSchemaDefinition
-  case class OneOf(schemas: Seq[SchemaDefinition]) extends NameableSchemaDefinition
+  case class OneOf(schemas: List[SchemaDefinition], discriminatorPropertyName: String) extends NameableSchemaDefinition
 }
 
 case class SchemaProperty(name: String, schema: SchemaDefinition)

@@ -34,7 +34,7 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
 
   test("SchemaDefinitionResolver should resolve oneOf.yaml named schemas") {
     val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "oneOf.yaml"))
-    pprint.pprintln(openApiDefinition)
+   // pprint.pprintln(openApiDefinition)
   }
 
 }
