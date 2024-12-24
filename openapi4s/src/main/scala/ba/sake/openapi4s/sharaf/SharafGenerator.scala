@@ -35,7 +35,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
     )
     val modelFileSources = openapiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
       val namedSchemaName = namedSchemaDef.name.capitalize
-      val modelSources = generateModelSources(namedSchemaDef)
+      val modelSources = generateModelSources(namedSchemaDef, None)
       val allStmts = modelImports ++ modelSources
       Option.when(modelSources.nonEmpty) {
         GeneratedFileSource(
@@ -57,7 +57,6 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
 
   private def generateControllerSources(tag: String, pathDefinitions: List[PathDefinition]): List[GeneratedFileSource] = {
     val controllerTypeName = Type.Name(CaseUtils.toCamelCase(tag, true, '_') + "Controller")
-    println (controllerTypeName)
     val casesnel = pathDefinitions.map { pathDef =>
       val pathSegmentPatterns = pathDef.pathSegments.map {
         case PathSegment.Literal(value) => Lit.String(value)
@@ -146,7 +145,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
     )
   }
 
-  private def generateModelSources(namedSchemaDef: SchemaDefinition.Named): List[Stat] = {
+  private def generateModelSources(namedSchemaDef: SchemaDefinition.Named, superType: Option[Type]): List[Stat] = {
     val namedSchemaName = namedSchemaDef.name.capitalize
     if (generatedNamedSchemas(namedSchemaName)) return List.empty
     val typeName = Type.Name(namedSchemaName)
@@ -186,11 +185,13 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
         }
         // validation
         val validatorStmts = generateValidatorStmts(typeName, obj.properties.map(p => (p.name, p.schema)))
-        val modelDefStats = List(q"""
-          case class ${typeName}(
-            ..${Term.ParamClause(params)}
-          ) derives JsonRW
-          """) ++
+        val classDefinition = superType match {
+          case Some(st) =>
+            val extendsInit = init"${st}()"
+            q""" case class ${typeName}( ..${Term.ParamClause(params)} ) extends ${extendsInit} derives JsonRW """
+          case None => q""" case class ${typeName}( ..${Term.ParamClause(params)} ) derives JsonRW """
+        }
+        val modelDefStats = List(classDefinition) ++
           Option.when(validatorStmts.nonEmpty)(q""" object ${termName} { ..${validatorStmts} } """).toList
 
         modelDefStats ++ adHocEnums
@@ -211,7 +212,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
         val oneOfCases = oneOfSchema.schemas.flatMap {
           case SchemaDefinition.Ref(refName) =>
             openapiDefinition.namedSchemaDefinitions.defs.find(_.name == refName) match {
-              case Some(referencedNamedSchema) => generateModelSources(referencedNamedSchema)
+              case Some(referencedNamedSchema) => generateModelSources(referencedNamedSchema, Some(typeName))
               case None => throw new RuntimeException(s"Non-existing sub-schema type: '${refName}'")
             }
           case other => throw new RuntimeException(s"Unsupported oneOf sub-schema type: '${other.getClass}'")
