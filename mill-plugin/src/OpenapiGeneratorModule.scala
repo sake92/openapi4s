@@ -3,24 +3,24 @@ package ba.sake.openapi4s
 import mill._
 import mill.scalalib._
 
-trait OpenapiGeneratorModule extends JavaModule {
+trait OpenApiGeneratorModule extends JavaModule {
 
-  def openapi4sUrl: T[String] = T((millSourcePath / "resources" / "openapi.json").wrapped.toUri.toString)
-  def openapi4sTargetDir: T[os.Path] = T(millSourcePath / "src")
+  def openApi4sUrl: T[String] = T((millSourcePath / "resources" / "openapi.json").wrapped.toUri.toString)
+  def openApi4sTargetDir: T[os.Path] = T(millSourcePath / "src")
 
-  def openapi4sGenerator: T[String] = "sharaf"
-  def openapi4sPackage: T[String]
+  def openApi4sGenerator: T[String] = "sharaf"
+  def openApi4sPackage: T[String]
 
-  def openapi4sGenerate(): Command[Unit] = T.command {
-    println("Starting to generate openapi sources...")
+  def openApi4sGenerate(): Command[Unit] = T.command {
+    println("Starting to generate OpenApi sources...")
     val config = OpenApiGenerator.Config(
-      url = openapi4sUrl(),
-      baseFolder = openapi4sTargetDir().wrapped,
-      basePackage = openapi4sPackage()
+      url = openApi4sUrl(),
+      baseFolder = openApi4sTargetDir().wrapped,
+      basePackage = openApi4sPackage()
     )
-    val generator = OpenApiGenerator(openapi4sGenerator(), config)
+    val generator = OpenApiGenerator(openApi4sGenerator(), config)
     generator.generate()
-    println("Finished generating openapi sources")
+    println("Finished generating OpenApi sources")
   }
 
 }

@@ -7,7 +7,7 @@ import scala.meta.dialects.Scala34
 import org.apache.commons.text.CaseUtils
 import ba.sake.regenesca._
 
-class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenApiDefinition) extends OpenApiGenerator {
+class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenApiDefinition) extends OpenApiGenerator {
 
   private val merger = SourceMerger(mergeDefBody = true)
   private val regenescaGenerator = RegenescaGenerator(merger)
@@ -16,13 +16,13 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
   private var generatedNamedSchemas = Set.empty[String]
 
   override def generate(): Unit = {
-    println(s"Started generating openapi '${config.url}' server into '${config.baseFolder}' ...")
+    println(s"Started generating OpenApi '${config.url}' server into '${config.baseFolder}' ...")
     val packagePath = config.basePackage.replaceAll("\\.", "/")
     val adaptedGenSourceFiles = generateSources.map { gsf =>
       gsf.copy(file = config.baseFolder.resolve(packagePath).resolve(gsf.file.toString))
     }
     regenescaGenerator.generate(adaptedGenSourceFiles)
-    println(s"Finished generating openapi '${config.url}' server.")
+    println(s"Finished generating OpenApi '${config.url}' server.")
   }
 
   private[sharaf] def generateSources: Seq[GeneratedFileSource] = {
@@ -33,7 +33,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
       q"import ba.sake.tupson.JsonRW",
       q"import ba.sake.validson.Validator"
     )
-    val modelFileSources = openapiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
+    val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
       val namedSchemaName = namedSchemaDef.name.capitalize
       val modelSources = generateModelSources(namedSchemaDef, None)
       val allStmts = modelImports ++ modelSources
@@ -49,13 +49,16 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
   }
 
   private def generateControllersSources: List[GeneratedFileSource] = {
-    val groupedByTag = openapiDefinition.pathDefinitions.defs.groupBy(_.getTag)
+    val groupedByTag = openApiDefinition.pathDefinitions.defs.groupBy(_.getTag)
     groupedByTag.flatMap { case (tag, pathDefinitions) =>
       generateControllerSources(tag, pathDefinitions)
     }
   }.toList
 
-  private def generateControllerSources(tag: String, pathDefinitions: List[PathDefinition]): List[GeneratedFileSource] = {
+  private def generateControllerSources(
+      tag: String,
+      pathDefinitions: List[PathDefinition]
+  ): List[GeneratedFileSource] = {
     val controllerTypeName = Type.Name(CaseUtils.toCamelCase(tag, true, '_') + "Controller")
     val casesnel = pathDefinitions.map { pathDef =>
       val pathSegmentPatterns = pathDef.pathSegments.map {
@@ -211,7 +214,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
       case oneOfSchema: SchemaDefinition.OneOf =>
         val oneOfCases = oneOfSchema.schemas.flatMap {
           case SchemaDefinition.Ref(refName) =>
-            openapiDefinition.namedSchemaDefinitions.defs.find(_.name == refName) match {
+            openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName) match {
               case Some(referencedNamedSchema) => generateModelSources(referencedNamedSchema, Some(typeName))
               case None => throw new RuntimeException(s"Non-existing sub-schema type: '${refName}'")
             }
