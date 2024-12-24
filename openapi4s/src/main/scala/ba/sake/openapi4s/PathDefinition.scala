@@ -1,17 +1,17 @@
 package ba.sake.openapi4s
 
 case class PathDefinitions(
-    defs: Seq[PathDefinition]
+    defs: List[PathDefinition]
 )
 
 case class PathDefinition(
     method: String,
     path: String,
-    pathSegments: Seq[PathSegment],
-    queryParams: Seq[QueryParam],
+    pathSegments: List[PathSegment],
+    queryParams: List[QueryParam],
     reqBody: Option[ReqBodyDefinition],
     resBody: Option[ResBodyDefinition],
-    tags: Seq[String],
+    tags: List[String],
     summary: String,
     description: String,
     operationId: String

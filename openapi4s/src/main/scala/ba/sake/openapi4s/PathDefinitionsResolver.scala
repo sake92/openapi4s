@@ -8,7 +8,7 @@ import io.swagger.v3.oas.models.media.MediaType
 
 import scala.annotation.tailrec
 
-class PathsResolver(
+class PathDefinitionsResolver(
     schemaDefinitionResolver: SchemaDefinitionResolver
 ) {
 
@@ -59,7 +59,7 @@ class PathsResolver(
         /* path */
         val pathParamsMap = Option(operation.getParameters)
           .map(_.asScala)
-          .getOrElse(Seq.empty)
+          .getOrElse(List.empty)
           .filter(_.getIn == "path")
           .map { param =>
             val paramSchema = schemaDefinitionResolver.resolveSchema(param.getSchema)
@@ -70,7 +70,7 @@ class PathsResolver(
             param.getName -> paramSchema
           }
           .toMap
-        val pathSegments: Seq[PathSegment] = pathKey
+        val pathSegments: List[PathSegment] = pathKey
           .dropWhile(_ == '/')
           .split("/")
           .map { rawSegment =>
@@ -86,12 +86,12 @@ class PathsResolver(
               PathSegment.Literal(rawSegment)
             }
           }
-          .toSeq
+          .toList
         /* query */
         val queryParams =
           Option(operation.getParameters)
             .map(_.asScala)
-            .getOrElse(Seq.empty)
+            .getOrElse(List.empty)
             .filter(_.getIn == "query")
             .map { param =>
               val paramSchema = schemaDefinitionResolver.resolveSchema(param.getSchema)
@@ -101,7 +101,7 @@ class PathsResolver(
                 )
               QueryParam(param.getName, paramSchema, param.getRequired)
             }
-            .toSeq
+            .toList
 
         PathDefinition(
           method = method.toString,
@@ -110,83 +110,83 @@ class PathsResolver(
           queryParams = queryParams,
           reqBody = reqBody,
           resBody = resBody,
-          tags = Option(operation.getTags).map(_.asScala.toSeq).getOrElse(Seq.empty),
+          tags = Option(operation.getTags).map(_.asScala.toList).getOrElse(List.empty),
           summary = Option(operation.getSummary).getOrElse(""),
           description = Option(operation.getDescription).getOrElse(""),
           operationId = Option(operation.getOperationId).getOrElse("")
         )
-      }.toSeq
-    }.toSeq
+      }.toList
+    }.toList
     PathDefinitions(pathDefs)
   }
 
   @tailrec
   private def isAllowedPathParamSchema(schema: SchemaDefinition): Boolean = schema match {
-    case _: SchemaDefinition.Str          => true
-    case _: SchemaDefinition.Password     => true
-    case _: SchemaDefinition.Email        => true
-    case _: SchemaDefinition.Base64Bytes  => true
-    case _: SchemaDefinition.Int32        => true
-    case _: SchemaDefinition.Int64        => true
-    case _: SchemaDefinition.Num32        => true
-    case _: SchemaDefinition.Num64        => true
-    case _: SchemaDefinition.Bool         => true
-    case _: SchemaDefinition.Uuid         => true
-    case _: SchemaDefinition.Date         => true
-    case _: SchemaDefinition.DateTime     => true
-    case SchemaDefinition.Opt(innerSchema)  => isAllowedPathParamSchema(innerSchema)
-    case _: SchemaDefinition.Enum         => true
-    case SchemaDefinition.Arr(_, _, _, _) => false
-    case _: SchemaDefinition.Ref          => false
-    case _: SchemaDefinition.Named        => false
-    case _: SchemaDefinition.Obj          => false
-    case _: SchemaDefinition.OneOf        => false
+    case _: SchemaDefinition.Str           => true
+    case _: SchemaDefinition.Password      => true
+    case _: SchemaDefinition.Email         => true
+    case _: SchemaDefinition.Base64Bytes   => true
+    case _: SchemaDefinition.Int32         => true
+    case _: SchemaDefinition.Int64         => true
+    case _: SchemaDefinition.Num32         => true
+    case _: SchemaDefinition.Num64         => true
+    case _: SchemaDefinition.Bool          => true
+    case _: SchemaDefinition.Uuid          => true
+    case _: SchemaDefinition.Date          => true
+    case _: SchemaDefinition.DateTime      => true
+    case SchemaDefinition.Opt(innerSchema) => isAllowedPathParamSchema(innerSchema)
+    case _: SchemaDefinition.Enum          => true
+    case SchemaDefinition.Arr(_, _, _, _)  => false
+    case _: SchemaDefinition.Ref           => false
+    case _: SchemaDefinition.Named         => false
+    case _: SchemaDefinition.Obj           => false
+    case _: SchemaDefinition.OneOf         => false
   }
 
   @tailrec
   private def isAllowedQueryParamSchema(schema: SchemaDefinition): Boolean = schema match {
-    case _: SchemaDefinition.Str                  => true
-    case _: SchemaDefinition.Password             => true
-    case _: SchemaDefinition.Email                => true
-    case _: SchemaDefinition.Base64Bytes          => true
-    case _: SchemaDefinition.Int32                => true
-    case _: SchemaDefinition.Int64                => true
-    case _: SchemaDefinition.Num32                => true
-    case _: SchemaDefinition.Num64                => true
-    case _: SchemaDefinition.Bool                 => true
-    case _: SchemaDefinition.Uuid                 => true
-    case _: SchemaDefinition.Date                 => true
-    case _: SchemaDefinition.DateTime             => true
+    case _: SchemaDefinition.Str                    => true
+    case _: SchemaDefinition.Password               => true
+    case _: SchemaDefinition.Email                  => true
+    case _: SchemaDefinition.Base64Bytes            => true
+    case _: SchemaDefinition.Int32                  => true
+    case _: SchemaDefinition.Int64                  => true
+    case _: SchemaDefinition.Num32                  => true
+    case _: SchemaDefinition.Num64                  => true
+    case _: SchemaDefinition.Bool                   => true
+    case _: SchemaDefinition.Uuid                   => true
+    case _: SchemaDefinition.Date                   => true
+    case _: SchemaDefinition.DateTime               => true
     case SchemaDefinition.Opt(innerSchema)          => isAllowedQueryParamSchema(innerSchema)
-    case _: SchemaDefinition.Enum                 => true
+    case _: SchemaDefinition.Enum                   => true
     case SchemaDefinition.Arr(innerSchema, _, _, _) => isAllowedQueryParamSchema(innerSchema)
-    case _: SchemaDefinition.Ref                  => true
-    case _: SchemaDefinition.Named                => true
-    case _: SchemaDefinition.Obj                  => false
-    case _: SchemaDefinition.OneOf                => false
+    case _: SchemaDefinition.Ref                    => true
+    case _: SchemaDefinition.Named                  => true
+    case _: SchemaDefinition.Obj                    => false
+    case _: SchemaDefinition.OneOf                  => false
   }
 
   @tailrec
   private def isAllowedBodySchema(schema: SchemaDefinition): Boolean = schema match {
-    case _: SchemaDefinition.Str                  => true
-    case _: SchemaDefinition.Password             => true
-    case _: SchemaDefinition.Email                => true
-    case _: SchemaDefinition.Base64Bytes          => true
-    case _: SchemaDefinition.Int32                => true
-    case _: SchemaDefinition.Int64                => true
-    case _: SchemaDefinition.Num32                => true
-    case _: SchemaDefinition.Num64                => true
-    case _: SchemaDefinition.Bool                 => true
-    case _: SchemaDefinition.Uuid                 => true
-    case _: SchemaDefinition.Date                 => true
-    case _: SchemaDefinition.DateTime             => true
+    case _: SchemaDefinition.Str                    => true
+    case _: SchemaDefinition.Password               => true
+    case _: SchemaDefinition.Email                  => true
+    case _: SchemaDefinition.Base64Bytes            => true
+    case _: SchemaDefinition.Int32                  => true
+    case _: SchemaDefinition.Int64                  => true
+    case _: SchemaDefinition.Num32                  => true
+    case _: SchemaDefinition.Num64                  => true
+    case _: SchemaDefinition.Bool                   => true
+    case _: SchemaDefinition.Uuid                   => true
+    case _: SchemaDefinition.Date                   => true
+    case _: SchemaDefinition.DateTime               => true
     case SchemaDefinition.Opt(innerSchema)          => isAllowedBodySchema(innerSchema)
-    case _: SchemaDefinition.Enum                 => true
+    case _: SchemaDefinition.Enum                   => true
     case SchemaDefinition.Arr(innerSchema, _, _, _) => isAllowedBodySchema(innerSchema)
-    case _: SchemaDefinition.Ref                  => true
-    case _: SchemaDefinition.Named                => true
-    case _: SchemaDefinition.Obj                  => false
-    case _: SchemaDefinition.OneOf                => false
+    case _: SchemaDefinition.Ref                    => true
+    case _: SchemaDefinition.Named                  => true
+    case _: SchemaDefinition.Obj                    => false
+    case _: SchemaDefinition.OneOf                  => false
   }
 
 }

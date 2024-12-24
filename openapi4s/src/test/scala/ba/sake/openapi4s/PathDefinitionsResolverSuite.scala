@@ -4,9 +4,9 @@ import scala.jdk.CollectionConverters._
 import io.swagger.parser.OpenAPIParser
 import ba.sake.openapi4s.SchemaDefinition._
 
-class PathsResolverSuite extends munit.FunSuite {
+class PathDefinitionsResolverSuite extends munit.FunSuite {
 
-  test("PathsResolver should resolve petstore.json path definitions") {
+  test("PathDefinitionsResolver should resolve petstore.json path definitions") {
 
     val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "petstore.json"))
     val pathDefinitions = openApiDefinition.pathDefinitions
@@ -43,7 +43,7 @@ class PathsResolverSuite extends munit.FunSuite {
       PathDefinition(
         method = "GET",
         path = "/pet/findByStatus",
-        pathSegments = Seq(PathSegment.Literal("pet"), PathSegment.Literal("findByStatus")),
+        pathSegments = List(PathSegment.Literal("pet"), PathSegment.Literal("findByStatus")),
         queryParams = List(
           QueryParam(
             name = "status",
@@ -62,7 +62,7 @@ class PathsResolverSuite extends munit.FunSuite {
   }
 
   // https://github.com/OAI/OpenAPI-Specification/blob/3.1.1/examples/v3.0/petstore.json
-  test("PathsResolver should resolve petstore_3.0.0.json") {
+  test("PathDefinitionsResolver should resolve petstore_3.0.0.json") {
     val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "petstore_3.0.0.json") )
     // pprint.pprintln(openApiDefinition)
     val listPetsPath = openApiDefinition.pathDefinitions.defs.find(_.operationId == "listPets").get
@@ -71,7 +71,7 @@ class PathsResolverSuite extends munit.FunSuite {
       PathDefinition(
         method = "GET",
         path = "/pets",
-        pathSegments = Seq(PathSegment.Literal(value = "pets")),
+        pathSegments = List(PathSegment.Literal(value = "pets")),
         queryParams = List(
           QueryParam(
             name = "limit",

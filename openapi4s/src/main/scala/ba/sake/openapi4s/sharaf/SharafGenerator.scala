@@ -61,37 +61,35 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
             p"param[${tpe}]($paramName)"
           }
       }
-      val pathSegmentPatternsClause = Pat.ArgClause(pathSegmentPatterns.toList)
+      val pathSegmentPatternsClause = Pat.ArgClause(pathSegmentPatterns)
       val methodExtractor = Term.Name(pathDef.method.toUpperCase)
       val queryParamStmts = Option
         .when(pathDef.queryParams.nonEmpty) {
-          val (qpParams, adhocEnums) = pathDef.queryParams
-            .map { qp =>
-              val adhocEnumOpt = Option.when(qp.schema.isInstanceOf[SchemaDefinition.Enum]) {
-                val adhocEnumName = generateEnumName("QP", qp.name)
-                val adhocEnumType = Type.Name(adhocEnumName)
-                val enumCaseDefs = Defn.RepeatedEnumCase(
-                  List.empty,
-                  qp.schema.asInstanceOf[SchemaDefinition.Enum].values.toList.map { enumDefCaseValue =>
-                    Term.Name(enumDefCaseValue)
-                  }
-                )
-                q"""enum ${adhocEnumType} derives QueryStringRW {
+          val (qpParams, adhocEnums) = pathDef.queryParams.map { qp =>
+            val adhocEnumOpt = Option.when(qp.schema.isInstanceOf[SchemaDefinition.Enum]) {
+              val adhocEnumName = generateEnumName("QP", qp.name)
+              val adhocEnumType = Type.Name(adhocEnumName)
+              val enumCaseDefs = Defn.RepeatedEnumCase(
+                List.empty,
+                qp.schema.asInstanceOf[SchemaDefinition.Enum].values.map { enumDefCaseValue =>
+                  Term.Name(enumDefCaseValue)
+                }
+              )
+              q"""enum ${adhocEnumType} derives QueryStringRW {
                     ${enumCaseDefs}
                 }"""
-              }
-              val qpName = Name(qp.name)
-              val tpe = resolveType(qp.schema, Some(qp.name), Some("QP"))
-              val finalTpe = if (qp.required) tpe else t"Option[$tpe]"
-              (param"${qpName}: ${finalTpe}", adhocEnumOpt)
             }
-            .toList
-            .unzip
-          // TODO validation
-          adhocEnums.flatten ++ List(
-            q"case class QP(..${qpParams}) derives QueryStringRW",
-            q"val qp = Request.current.queryParamsValidated[QP]"
-          )
+            val qpName = Name(qp.name)
+            val tpe = resolveType(qp.schema, Some(qp.name), Some("QP"))
+            val finalTpe = if (qp.required) tpe else t"Option[$tpe]"
+            (param"${qpName}: ${finalTpe}", adhocEnumOpt)
+          }.unzip
+          // validation
+          val validatorStmts = generateValidatorStmts(t"QP", pathDef.queryParams.map(p => (p.name, p.schema)))
+          adhocEnums.flatten ++
+            List(q"case class QP(..${qpParams}) derives QueryStringRW") ++
+            Option.when(validatorStmts.nonEmpty)(q""" object QP { ..${validatorStmts} } """).toList ++
+            List(q"val qp = Request.current.queryParamsValidated[QP]")
         }
         .toList
         .flatten
@@ -179,68 +177,14 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
           }
         }
         // validation
-        val validationCalls = obj.properties.flatMap { property =>
-          val propName = Term.Name(property.name)
-          property.schema match {
-            case int: SchemaDefinition.Int32 =>
-              List(
-                int.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Int(min)) },
-                int.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Int(max)) }
-              ).flatten
-            case long: SchemaDefinition.Int64 =>
-              List(
-                long.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Long(min)) },
-                long.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Long(max)) }
-              ).flatten
-            case float: SchemaDefinition.Num32 =>
-              List(
-                float.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Float(min)) },
-                float.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Float(max)) }
-              ).flatten
-            case double: SchemaDefinition.Num64 =>
-              List(
-                double.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Double(min)) },
-                double.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Double(max)) }
-              ).flatten
-            case str: SchemaDefinition.Str =>
-              List(
-                str.minLength.map { min => "minLength" -> List(q"_.${propName}", Lit.Int(min)) },
-                str.maxLength.map { max => "maxLength" -> List(q"_.${propName}", Lit.Int(max)) },
-                str.pattern.map { pattern => "matches" -> List(q"_.${propName}", Lit.String(pattern)) }
-              ).flatten
-            case arr: SchemaDefinition.Arr =>
-              List(
-                arr.minItems.map { min => "minLength" -> List(q"_.${propName}", Lit.Int(min)) },
-                arr.maxItems.map { max => "maxLength" -> List(q"_.${propName}", Lit.Int(max)) }
-              ).flatten
-            case _ => List.empty
-          }
-        }
-        val objectStmts = Option
-          .when(validationCalls.nonEmpty) {
-            val init = q"Validator.derived[${typeName}]"
-            val body = validationCalls.foldLeft(init: Term) { case (a, (funName, funArgs)) =>
-              Term.Apply(
-                Term.Select(a, Term.Name(funName)),
-                Term.ArgClause(funArgs)
-              )
-            }
-            q"given Validator[${typeName}] = ${body}"
-          }
-          .toList
-
-        val modelDefStats = List(
-          q"""
+        val validatorStmts = generateValidatorStmts(typeName, obj.properties.map(p => (p.name, p.schema)))
+        val modelDefStats = List(q"""
           case class ${typeName}(
-            ..${Term.ParamClause(params.toList)}
+            ..${Term.ParamClause(params)}
           ) derives JsonRW
-          """,
-          q"""
-          object ${termName} {
-            ..${objectStmts}
-          }
-          """
-        )
+          """) ++
+          Option.when(validatorStmts.nonEmpty)(q""" object ${termName} { ..${validatorStmts} } """).toList
+
         modelDefStats ++ adHocEnums
       case enumDef: SchemaDefinition.Enum =>
         val enumCaseDefs = Defn.RepeatedEnumCase(
@@ -314,6 +258,58 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
     case SchemaDefinition.Named(name, _) => Type.Name(name)
     case SchemaDefinition.Obj(_)         => throw new RuntimeException(s"Cannot make up an ad hoc type for 'object'")
     case _: SchemaDefinition.OneOf       => throw new RuntimeException(s"Cannot make up an ad hoc type for 'oneOf'")
+  }
+
+  private def generateValidatorStmts(typeName: Type, properties: List[(String, SchemaDefinition)]): List[Stat] = {
+    val validationCalls = properties.flatMap { case (name, schema) =>
+      val propName = Term.Name(name)
+      schema match {
+        case int: SchemaDefinition.Int32 =>
+          List(
+            int.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Int(min)) },
+            int.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Int(max)) }
+          ).flatten
+        case long: SchemaDefinition.Int64 =>
+          List(
+            long.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Long(min)) },
+            long.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Long(max)) }
+          ).flatten
+        case float: SchemaDefinition.Num32 =>
+          List(
+            float.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Float(min)) },
+            float.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Float(max)) }
+          ).flatten
+        case double: SchemaDefinition.Num64 =>
+          List(
+            double.minimum.map { min => "min" -> List(q"_.${propName}", Lit.Double(min)) },
+            double.maximum.map { max => "max" -> List(q"_.${propName}", Lit.Double(max)) }
+          ).flatten
+        case str: SchemaDefinition.Str =>
+          List(
+            str.minLength.map { min => "minLength" -> List(q"_.${propName}", Lit.Int(min)) },
+            str.maxLength.map { max => "maxLength" -> List(q"_.${propName}", Lit.Int(max)) },
+            str.pattern.map { pattern => "matches" -> List(q"_.${propName}", Lit.String(pattern)) }
+          ).flatten
+        case arr: SchemaDefinition.Arr =>
+          List(
+            arr.minItems.map { min => "minLength" -> List(q"_.${propName}", Lit.Int(min)) },
+            arr.maxItems.map { max => "maxLength" -> List(q"_.${propName}", Lit.Int(max)) }
+          ).flatten
+        case _ => List.empty
+      }
+    }
+    Option
+      .when(validationCalls.nonEmpty) {
+        val init = q"Validator.derived[${typeName}]"
+        val body = validationCalls.foldLeft(init: Term) { case (a, (funName, funArgs)) =>
+          Term.Apply(
+            Term.Select(a, Term.Name(funName)),
+            Term.ArgClause(funArgs)
+          )
+        }
+        q"given Validator[${typeName}] = ${body}"
+      }
+      .toList
   }
 
   private def generateEnumName(parentType: String, propName: String): String = {

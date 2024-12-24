@@ -8,12 +8,11 @@ case class OpenApiDefinition(
     pathDefinitions: PathDefinitions
 ) {
   // make OneOf-s come first!
-  def normalized : OpenApiDefinition = {
-    val sortedDefs = namedSchemaDefinitions.defs.sortWith{ (a,b) =>
-      (a.schema,b.schema) match {
-        case (_: SchemaDefinition.OneOf,_) => true
-        //case (_, _: SchemaDefinition.OneOf) => true
-        case _ => false
+  def normalized: OpenApiDefinition = {
+    val sortedDefs = namedSchemaDefinitions.defs.sortWith { (a, b) =>
+      (a.schema, b.schema) match {
+        case (_: SchemaDefinition.OneOf, _) => true
+        case _                              => false
       }
     }
     this.copy(
@@ -27,15 +26,15 @@ object OpenApiDefinition {
   def parse(url: String): OpenApiDefinition = {
     val result = new OpenAPIParser().readLocation(url, null, null)
     val openApi = result.getOpenAPI
-    val errorMessagesOpt = Option (result.getMessages).map(_.asScala.toSeq).filterNot(_.isEmpty)
+    val errorMessagesOpt = Option(result.getMessages).map(_.asScala.toSeq).filterNot(_.isEmpty)
 
     if (openApi == null) {
       val msgs = errorMessagesOpt.getOrElse(Seq.empty).mkString("; ")
       throw new RuntimeException(s"OpenAPI definition at '${url}' is not valid: ${msgs}")
     } else {
-      errorMessagesOpt.foreach {errorMessages =>
+      errorMessagesOpt.foreach { errorMessages =>
         val msgs = errorMessages.mkString("; ")
-        println( s"OpenAPI definition at '${url}' had issues: ${msgs}")
+        println(s"OpenAPI definition at '${url}' had issues: ${msgs}")
       }
       val schemaDefinitionResolver = new SchemaDefinitionResolver()
       val namedSchemaDefinitions = Option(openApi.getComponents) match {
@@ -44,7 +43,7 @@ object OpenApiDefinition {
         case None =>
           NamedSchemaDefinitions(Seq.empty)
       }
-      val pathsResolver = new PathsResolver(schemaDefinitionResolver)
+      val pathsResolver = new PathDefinitionsResolver(schemaDefinitionResolver)
       val pathDefinitions = pathsResolver.resolve(openApi.getPaths)
       OpenApiDefinition(namedSchemaDefinitions, pathDefinitions).normalized
     }
