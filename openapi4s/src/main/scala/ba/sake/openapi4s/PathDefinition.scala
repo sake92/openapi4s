@@ -15,7 +15,10 @@ case class PathDefinition(
     summary: String,
     description: String,
     operationId: String
-)
+) {
+  def getTag: String =
+    tags.headOption.getOrElse("Default")
+}
 
 sealed abstract class PathSegment
 object PathSegment {

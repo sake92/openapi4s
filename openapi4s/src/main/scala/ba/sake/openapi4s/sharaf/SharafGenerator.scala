@@ -44,13 +44,21 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
         )
       }
     }
-    val controllerFileSources = generateControllerSources
+    val controllerFileSources = generateControllersSources
     modelFileSources ++ controllerFileSources
   }
 
-  private def generateControllerSources: List[GeneratedFileSource] = {
-    // TODO group by first tag, or "default" (main controller)
-    val casesnel = openapiDefinition.pathDefinitions.defs.map { pathDef =>
+  private def generateControllersSources: List[GeneratedFileSource] = {
+    val groupedByTag = openapiDefinition.pathDefinitions.defs.groupBy(_.getTag)
+    groupedByTag.flatMap { case (tag, pathDefinitions) =>
+      generateControllerSources(tag, pathDefinitions)
+    }
+  }.toList
+
+  private def generateControllerSources(tag: String, pathDefinitions: List[PathDefinition]): List[GeneratedFileSource] = {
+    val controllerTypeName = Type.Name(CaseUtils.toCamelCase(tag, true, '_') + "Controller")
+    println (controllerTypeName)
+    val casesnel = pathDefinitions.map { pathDef =>
       val pathSegmentPatterns = pathDef.pathSegments.map {
         case PathSegment.Literal(value) => Lit.String(value)
         case PathSegment.Param(name, schema) =>
@@ -112,7 +120,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
                 { ..${routeStmts} }
         """
       pathDefCase
-    }.toList
+    }
     val pkg = generatePkgSelect(s"${config.basePackage}.controllers")
     val imports = List[Import](
       q"import io.undertow.util.StatusCodes",
@@ -129,7 +137,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openapiDefinition: OpenAp
         package ${pkg} {
             ..${imports}
 
-            class MainController {
+            class ${controllerTypeName} {
                 def routes = Routes{ ..case ${casesnel} }
             }
         }
