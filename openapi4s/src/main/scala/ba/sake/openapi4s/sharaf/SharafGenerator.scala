@@ -59,7 +59,8 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
       tag: String,
       pathDefinitions: List[PathDefinition]
   ): List[GeneratedFileSource] = {
-    val controllerTypeName = Type.Name(CaseUtils.toCamelCase(tag, true, '_') + "Controller")
+    val controllerName = CaseUtils.toCamelCase(tag, true, '_') + "Controller"
+    val controllerTypeName = Type.Name(controllerName)
     val casesnel = pathDefinitions.map { pathDef =>
       val pathSegmentPatterns = pathDef.pathSegments.map {
         case PathSegment.Literal(value) => Lit.String(value)
@@ -134,7 +135,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
     )
     List(
       GeneratedFileSource(
-        Paths.get(s"controllers/MainController.scala"),
+        Paths.get(s"controllers/${controllerName}.scala"),
         source"""
         package ${pkg} {
             ..${imports}
