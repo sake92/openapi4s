@@ -19,7 +19,7 @@ class SchemaDefinitionResolver {
         case arr: SchemaDefinition.Arr     => Some(SchemaDefinition.Named(schemaKey, arr))
         case oneOf: SchemaDefinition.OneOf => Some(SchemaDefinition.Named(schemaKey, oneOf))
         case other =>
-          println(s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model.")
+          println(s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!")
           None
       }
     }.toList
