@@ -6,6 +6,7 @@ import ba.sake.openapi4s.SchemaDefinition._
 
 class PathDefinitionsResolverSuite extends munit.FunSuite {
 
+  // GET /store/inventory IS REMOVED MANUALLY ! (unsupported
   test("PathDefinitionsResolver should resolve petstore.json path definitions") {
 
     val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "petstore.json"))

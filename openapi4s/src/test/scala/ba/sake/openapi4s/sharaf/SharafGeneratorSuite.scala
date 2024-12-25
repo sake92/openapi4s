@@ -36,7 +36,7 @@ class SharafGeneratorSuite extends munit.FunSuite {
     val generator = new SharafGenerator(config, openapiDefinition)
     val sources = generator.generateSources
     println("*" * 100)
-    println("Generated Sharaf sources for oneOf.yaml:")
+    println("Generated Sharaf sources for oneOf.yaml :")
     sources.foreach { source =>
       println("*" * 50)
       print("*" * 20)

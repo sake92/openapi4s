@@ -6,10 +6,11 @@ import scala.meta._
 import scala.meta.dialects.Scala34
 import org.apache.commons.text.CaseUtils
 import ba.sake.regenesca._
+import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 
 class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenApiDefinition) extends OpenApiGenerator {
 
-  private val merger = SourceMerger(mergeDefBody = true)
+  private val merger = SourceMerger(mergeDefBodies = true)
   private val regenescaGenerator = RegenescaGenerator(merger)
 
   // keep track of done schemas (to avoid generating a subtype multiple times)
@@ -30,6 +31,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
     val modelImports = List[Import](
       q"import java.time.*",
       q"import java.util.UUID",
+      // q"import org.typelevel.jawn.ast.JValue",
       q"import ba.sake.tupson.JsonRW",
       q"import ba.sake.validson.Validator"
     )
@@ -65,7 +67,8 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
       val pathSegmentPatterns = pathDef.pathSegments.map {
         case PathSegment.Literal(value) => Lit.String(value)
         case PathSegment.Param(name, schema) =>
-          val tpe = resolveType(schema, None, None, allowNullable = false)
+          val tpe =
+            resolveType(schema, None, None, allowNullable = false, s"${pathDef.method} '${pathDef.path}' path param")
           if (tpe.structure == t"String".structure) Pat.Var(Term.Name(name))
           else {
             val paramName = Pat.Var(Term.Name(name))
@@ -76,7 +79,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
       val methodExtractor = Term.Name(pathDef.method.toUpperCase)
       val queryParamStmts = Option
         .when(pathDef.queryParams.nonEmpty) {
-          val (qpParams, adhocEnums) = pathDef.queryParams.map { qp =>
+          val (qpParams, adhocEnums) = pathDef.queryParams.flatMap { qp =>
             val adhocEnumOpt = Option.when(qp.schema.isInstanceOf[SchemaDefinition.Enum]) {
               val adhocEnumName = generateEnumName("QP", qp.name)
               val adhocEnumType = Type.Name(adhocEnumName)
@@ -91,12 +94,26 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
                 }"""
             }
             val qpName = Name(qp.name)
-            val tpe = resolveType(qp.schema, Some(qp.name), Some("QP"))
-            val finalTpe = if (qp.required) tpe else t"Option[$tpe]"
-            (param"${qpName}: ${finalTpe}", adhocEnumOpt)
+            try {
+              val tpe = resolveType(
+                qp.schema,
+                Some(qp.name),
+                Some("QP"),
+                allowNullable = true,
+                s"${pathDef.method} '${pathDef.path}' query param"
+              )
+              val finalTpe = if (qp.required) tpe else t"Option[$tpe]"
+              Some((param"${qpName}: ${finalTpe}", adhocEnumOpt))
+            } catch {
+              case e: UnsupportedSchemaException =>
+                println(e.toString)
+                None
+            }
           }.unzip
           // validation
-          val validatorStmts = generateValidatorStmts(t"QP", pathDef.queryParams.map(p => (p.name, p.schema)))
+          // TODO figure out how to validate Option-al nicely
+          val validatedQPs = pathDef.queryParams.filter(_.required).map(qp => (qp.name, qp.schema))
+          val validatorStmts = generateValidatorStmts(t"QP", validatedQPs)
           adhocEnums.flatten ++
             List(q"case class QP(..${qpParams}) derives QueryStringRW") ++
             Option.when(validatorStmts.nonEmpty)(q""" object QP { ..${validatorStmts} } """).toList ++
@@ -105,16 +122,35 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
         .toList
         .flatten
 
-      val reqBodyStmts = pathDef.reqBody.map { body =>
-        val tpe = resolveType(body.schema, None, None)
-        // val finalTpe = if (body.required) tpe else t"Option[$tpe]"
-        q"val reqBody = Request.current.bodyJsonValidated[${tpe}]"
+      val reqBodyStmts = pathDef.reqBody.flatMap { body =>
+        try {
+          val tpe =
+            resolveType(body.schema, None, None, allowNullable = true, s"${pathDef.method} '${pathDef.path}' req body")
+          // val finalTpe = if (body.required) tpe else t"Option[$tpe]"
+          Some(q"val reqBody = Request.current.bodyJsonValidated[${tpe}]")
+        } catch {
+          case e: UnsupportedSchemaException =>
+            println(e.toString)
+            None
+        }
       }.toList
       val resBodyExpr = pathDef.resBody
-        .map { body =>
-          val tpe = resolveType(body.schema, None, None)
-          val todoBody = Lit.String(s"TODO: return ${tpe}")
-          q"""Response.withStatus(StatusCodes.NOT_IMPLEMENTED).withBody(${todoBody})"""
+        .flatMap { body =>
+          try {
+            val tpe = resolveType(
+              body.schema,
+              None,
+              None,
+              allowNullable = true,
+              s"${pathDef.method} '${pathDef.path}' res body"
+            )
+            val todoBody = Lit.String(s"TODO: return ${tpe}")
+            Some(q"""Response.withStatus(StatusCodes.NOT_IMPLEMENTED).withBody(${todoBody})""")
+          } catch {
+            case e: UnsupportedSchemaException =>
+              println(e.toString)
+              None
+          }
         }
         .getOrElse(q"Response.withStatus(StatusCodes.NOT_IMPLEMENTED)")
       val routeStmts = queryParamStmts ++ reqBodyStmts ++ List(resBodyExpr)
@@ -126,8 +162,11 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
     }
     val pkg = generatePkgSelect(s"${config.basePackage}.controllers")
     val imports = List[Import](
+      q"import java.time.*",
+      q"import java.util.UUID",
       q"import io.undertow.util.StatusCodes",
       q"import ba.sake.querson.QueryStringRW",
+      q"import ba.sake.validson.Validator",
       q"import ba.sake.sharaf.*, routing.*", {
         val importer = s"${config.basePackage}.models.*".parse[Importer].get
         q"import ..${List(importer)}"
@@ -154,16 +193,23 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
     if (generatedNamedSchemas(namedSchemaName)) return List.empty
     val typeName = Type.Name(namedSchemaName)
     val termName = Term.Name(namedSchemaName)
-
     val generatedModelSources = namedSchemaDef.schema match {
       case obj: SchemaDefinition.Obj =>
-        val params = obj.properties.map { property =>
-          val propertyTpe = resolveType(
-            property.schema,
-            Some(property.name),
-            Some(namedSchemaName)
-          )
-          param"${Term.Name(property.name)}: ${propertyTpe}"
+        val params = obj.properties.flatMap { property =>
+          try {
+            val propertyTpe = resolveType(
+              property.schema,
+              Some(property.name),
+              Some(namedSchemaName),
+              allowNullable = true,
+              context = s"${namedSchemaName}.${property.name}"
+            )
+            Some(param"${Term.Name(property.name)}: ${propertyTpe}")
+          } catch {
+            case e: UnsupportedSchemaException =>
+              println(e.toString)
+              None
+          }
         }
         // enums defined in-place, we invent a new name for them..
         val adHocEnums = obj.properties.flatMap { property =>
@@ -217,9 +263,13 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
           case SchemaDefinition.Ref(refName) =>
             openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName) match {
               case Some(referencedNamedSchema) => generateModelSources(referencedNamedSchema, Some(typeName))
-              case None => throw new RuntimeException(s"Non-existing sub-schema type: '${refName}'")
+              case None =>
+                println(s"Non-existing sub-schema type: '${refName}' [${namedSchemaName}}]")
+                None
             }
-          case other => throw new RuntimeException(s"Unsupported oneOf sub-schema type: '${other.getClass}'")
+          case other =>
+            println(s"Unsupported oneOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+            None
         }
         List(
           q"""
@@ -238,7 +288,8 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
       propertyName: Option[String],
       parentTypeName: Option[String],
       // e.g. path enum cannot be null..
-      allowNullable: Boolean = true
+      allowNullable: Boolean,
+      context: String
   ): Type = schemaDef match {
     case _: SchemaDefinition.Str         => t"String"
     case _: SchemaDefinition.Password    => t"String"
@@ -253,11 +304,11 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
     case _: SchemaDefinition.Date        => t"LocalDate"
     case _: SchemaDefinition.DateTime    => t"Instant"
     case SchemaDefinition.Opt(tpe) =>
-      val coreTpe = resolveType(tpe, propertyName, parentTypeName)
+      val coreTpe = resolveType(tpe, propertyName, parentTypeName, allowNullable = allowNullable, context)
       if (allowNullable) t"Option[${coreTpe}]"
       else coreTpe
     case arr: SchemaDefinition.Arr =>
-      val coreTpe = resolveType(arr.schema, propertyName, parentTypeName)
+      val coreTpe = resolveType(arr.schema, propertyName, parentTypeName, allowNullable = allowNullable, context)
       if (arr.uniqueItems) t"Set[${coreTpe}]"
       else t"Seq[${coreTpe}]"
     case SchemaDefinition.Enum(_, _) =>
@@ -265,12 +316,15 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
         case Some((parentType, propName)) =>
           Type.Name(generateEnumName(parentType, propName))
         case _ =>
-          throw new RuntimeException(s"Cannot make up an ad hoc type for unnamed 'enum'")
+          throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for unnamed 'enum' [${context}]")
       }
     case SchemaDefinition.Ref(name)      => Type.Name(name)
     case SchemaDefinition.Named(name, _) => Type.Name(name)
-    case SchemaDefinition.Obj(_)         => throw new RuntimeException(s"Cannot make up an ad hoc type for 'object'")
-    case _: SchemaDefinition.OneOf       => throw new RuntimeException(s"Cannot make up an ad hoc type for 'oneOf'")
+    case SchemaDefinition.Obj(_) =>
+      throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'object' [${context}]")
+    case _: SchemaDefinition.OneOf =>
+      throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'oneOf' [${context}]")
+    case _: SchemaDefinition.Unknown => t"Any"
   }
 
   private def generateValidatorStmts(typeName: Type, properties: List[(String, SchemaDefinition)]): List[Stat] = {
@@ -305,8 +359,8 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
           ).flatten
         case arr: SchemaDefinition.Arr =>
           List(
-            arr.minItems.map { min => "minLength" -> List(q"_.${propName}", Lit.Int(min)) },
-            arr.maxItems.map { max => "maxLength" -> List(q"_.${propName}", Lit.Int(max)) }
+            arr.minItems.map { min => "minItems" -> List(q"_.${propName}", Lit.Int(min)) },
+            arr.maxItems.map { max => "maxItems" -> List(q"_.${propName}", Lit.Int(max)) }
           ).flatten
         case _ => List.empty
       }

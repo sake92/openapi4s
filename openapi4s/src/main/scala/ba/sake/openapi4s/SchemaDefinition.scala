@@ -24,13 +24,14 @@ object SchemaDefinition {
   case class DateTime(default: Option[String]) extends SchemaDefinition
   case class Opt(schema: SchemaDefinition) extends SchemaDefinition
   case class Ref(name: String) extends SchemaDefinition
-  // invented here
-  case class Named(name: String, schema: NameableSchemaDefinition) extends SchemaDefinition
   case class Obj(properties: List[SchemaProperty]) extends NameableSchemaDefinition
   case class Enum(values: List[String], default: Option[String]) extends NameableSchemaDefinition
   case class Arr(schema: SchemaDefinition, minItems: Option[Int], maxItems: Option[Int], uniqueItems: Boolean)
       extends NameableSchemaDefinition
   case class OneOf(schemas: List[SchemaDefinition], discriminatorPropertyName: String) extends NameableSchemaDefinition
+  // invented here
+  case class Named(name: String, schema: NameableSchemaDefinition) extends SchemaDefinition
+  case class Unknown() extends SchemaDefinition
 }
 
 case class SchemaProperty(name: String, schema: SchemaDefinition)

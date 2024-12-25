@@ -39,7 +39,9 @@ object OpenApiDefinition {
       val schemaDefinitionResolver = new SchemaDefinitionResolver()
       val namedSchemaDefinitions = Option(openApi.getComponents) match {
         case Some(components) =>
-          schemaDefinitionResolver.resolveNamedSchemas(components.getSchemas.asScala.toMap)
+          schemaDefinitionResolver.resolveNamedSchemas(
+            Option(components.getSchemas).map(_.asScala).getOrElse(List.empty).toMap
+          )
         case None =>
           NamedSchemaDefinitions(Seq.empty)
       }
