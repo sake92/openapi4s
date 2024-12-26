@@ -30,7 +30,7 @@ OpenApi generators for Scala.
 ```scala
 package build
 
-import $ivy.`ba.sake::mill-openapi4s::0.0.10`
+import $ivy.`ba.sake::mill-openapi4s::0.0.9`
 import mill._
 import mill.scalalib._
 import ba.sake.openapi4s.OpenApiGeneratorModule
