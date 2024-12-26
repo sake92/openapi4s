@@ -9,7 +9,7 @@ import mill.scalalib.publish._
 import mill.main.BuildInfo.millVersion
 import mill.contrib.sonatypecentral.SonatypeCentralPublishModule
 
-val openapi4sVersion = "0.0.9-SNAPSHOT"
+val openapi4sVersion = "0.0.9"
 
 object openapi4s extends SbtModule with ScalafmtModule with Openapi4sPublishModule {
   def scalaVersion = "2.13.15"
