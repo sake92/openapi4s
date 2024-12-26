@@ -19,7 +19,9 @@ class SchemaDefinitionResolver {
         case arr: SchemaDefinition.Arr     => Some(SchemaDefinition.Named(schemaKey, arr))
         case oneOf: SchemaDefinition.OneOf => Some(SchemaDefinition.Named(schemaKey, oneOf))
         case other =>
-          println(s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!")
+          println(
+            s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!"
+          )
           None
       }
     }.toList
@@ -67,18 +69,23 @@ class SchemaDefinitionResolver {
                 throw new UnsupportedSchemaDefinitionException(s"Null is unsupported [${context}]")
             }
           case None =>
-            Option(schema.get$ref)
-              .map { refName =>
-                val refTpeName = refName.split("/").last
-                SchemaDefinition.Ref(refTpeName)
+            Option(schema.getOneOf)
+              .map { _ =>
+                getComposedSchema(schema, context)
+              }
+              .orElse {
+                Option(schema.get$ref)
+                  .map { refName =>
+                    val refTpeName = refName.split("/").last
+                    SchemaDefinition.Ref(refTpeName)
+                  }
               }
               .getOrElse {
                 println(s"Unknown type at ${context}")
                 SchemaDefinition.Unknown()
               }
         }
-
-      case other =>
+      case _ =>
         Option(schema.get$ref)
           .map { refName =>
             val refTpeName = refName.split("/").last

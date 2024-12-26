@@ -17,13 +17,13 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
   private var generatedNamedSchemas = Set.empty[String]
 
   override def generate(): Unit = {
-    println(s"Started generating OpenApi '${config.url}' server into '${config.baseFolder}' ...")
+    println(s"Started generating Sharaf server for '${config.url}' OpenApi into '${config.baseFolder}' ...")
     val packagePath = config.basePackage.replaceAll("\\.", "/")
     val adaptedGenSourceFiles = generateSources.map { gsf =>
       gsf.copy(file = config.baseFolder.resolve(packagePath).resolve(gsf.file.toString))
     }
     regenescaGenerator.generate(adaptedGenSourceFiles)
-    println(s"Finished generating OpenApi '${config.url}' server.")
+    println(s"Finished generating Sharaf server for '${config.url}' OpenApi.")
   }
 
   private[sharaf] def generateSources: Seq[GeneratedFileSource] = {
@@ -31,8 +31,8 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
     val modelImports = List[Import](
       q"import java.time.*",
       q"import java.util.UUID",
-      // q"import org.typelevel.jawn.ast.JValue",
-      q"import ba.sake.tupson.JsonRW",
+      q"import org.typelevel.jawn.ast.JValue",
+      q"import ba.sake.tupson.*",
       q"import ba.sake.validson.Validator"
     )
     val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
@@ -68,7 +68,14 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
         case PathSegment.Literal(value) => Lit.String(value)
         case PathSegment.Param(name, schema) =>
           val tpe =
-            resolveType(schema, None, None, allowNullable = false, s"${pathDef.method} '${pathDef.path}' path param")
+            resolveType(
+              schema,
+              None,
+              None,
+              allowNullable = false,
+              s"${pathDef.method} '${pathDef.path}' path param",
+              fallbackAnyType = t"String"
+            )
           if (tpe.structure == t"String".structure) Pat.Var(Term.Name(name))
           else {
             val paramName = Pat.Var(Term.Name(name))
@@ -100,7 +107,8 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
                 Some(qp.name),
                 Some("QP"),
                 allowNullable = true,
-                s"${pathDef.method} '${pathDef.path}' query param"
+                s"${pathDef.method} '${pathDef.path}' query param",
+                fallbackAnyType = t"String"
               )
               val finalTpe = if (qp.required) tpe else t"Option[$tpe]"
               Some((param"${qpName}: ${finalTpe}", adhocEnumOpt))
@@ -125,7 +133,14 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
       val reqBodyStmts = pathDef.reqBody.flatMap { body =>
         try {
           val tpe =
-            resolveType(body.schema, None, None, allowNullable = true, s"${pathDef.method} '${pathDef.path}' req body")
+            resolveType(
+              body.schema,
+              None,
+              None,
+              allowNullable = true,
+              s"${pathDef.method} '${pathDef.path}' req body",
+              fallbackAnyType = t"JValue"
+            )
           // val finalTpe = if (body.required) tpe else t"Option[$tpe]"
           Some(q"val reqBody = Request.current.bodyJsonValidated[${tpe}]")
         } catch {
@@ -142,7 +157,8 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
               None,
               None,
               allowNullable = true,
-              s"${pathDef.method} '${pathDef.path}' res body"
+              s"${pathDef.method} '${pathDef.path}' res body",
+              fallbackAnyType = t"JValue"
             )
             val todoBody = Lit.String(s"TODO: return ${tpe}")
             Some(q"""Response.withStatus(StatusCodes.NOT_IMPLEMENTED).withBody(${todoBody})""")
@@ -202,7 +218,8 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
               Some(property.name),
               Some(namedSchemaName),
               allowNullable = true,
-              context = s"${namedSchemaName}.${property.name}"
+              context = s"${namedSchemaName}.${property.name}",
+              fallbackAnyType = t"JValue"
             )
             Some(param"${Term.Name(property.name)}: ${propertyTpe}")
           } catch {
@@ -238,7 +255,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
         val classDefinition = superType match {
           case Some(st) =>
             val extendsInit = init"${st}()"
-            q""" case class ${typeName}( ..${Term.ParamClause(params)} ) extends ${extendsInit} derives JsonRW """
+            q""" case class ${typeName}( ..${Term.ParamClause(params)} ) extends ${extendsInit}"""
           case None => q""" case class ${typeName}( ..${Term.ParamClause(params)} ) derives JsonRW """
         }
         val modelDefStats = List(classDefinition) ++
@@ -274,7 +291,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
         List(
           q"""
           @discriminator(${Lit.String(oneOfSchema.discriminatorPropertyName)})
-          sealed trait ${typeName}
+          sealed trait ${typeName} derives JsonRW
           """,
           q"""  object ${termName} { ..${oneOfCases} } """
         )
@@ -289,7 +306,8 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
       parentTypeName: Option[String],
       // e.g. path enum cannot be null..
       allowNullable: Boolean,
-      context: String
+      context: String,
+      fallbackAnyType: Type
   ): Type = schemaDef match {
     case _: SchemaDefinition.Str         => t"String"
     case _: SchemaDefinition.Password    => t"String"
@@ -304,11 +322,13 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
     case _: SchemaDefinition.Date        => t"LocalDate"
     case _: SchemaDefinition.DateTime    => t"Instant"
     case SchemaDefinition.Opt(tpe) =>
-      val coreTpe = resolveType(tpe, propertyName, parentTypeName, allowNullable = allowNullable, context)
+      val coreTpe =
+        resolveType(tpe, propertyName, parentTypeName, allowNullable = allowNullable, context, fallbackAnyType)
       if (allowNullable) t"Option[${coreTpe}]"
       else coreTpe
     case arr: SchemaDefinition.Arr =>
-      val coreTpe = resolveType(arr.schema, propertyName, parentTypeName, allowNullable = allowNullable, context)
+      val coreTpe =
+        resolveType(arr.schema, propertyName, parentTypeName, allowNullable = allowNullable, context, fallbackAnyType)
       if (arr.uniqueItems) t"Set[${coreTpe}]"
       else t"Seq[${coreTpe}]"
     case SchemaDefinition.Enum(_, _) =>
@@ -324,7 +344,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
       throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'object' [${context}]")
     case _: SchemaDefinition.OneOf =>
       throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'oneOf' [${context}]")
-    case _: SchemaDefinition.Unknown => t"Any"
+    case _: SchemaDefinition.Unknown => fallbackAnyType
   }
 
   private def generateValidatorStmts(typeName: Type, properties: List[(String, SchemaDefinition)]): List[Stat] = {
