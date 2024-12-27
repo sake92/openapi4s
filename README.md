@@ -45,7 +45,7 @@ object api extends ScalaModule with OpenApiGeneratorModule {
   // openApi4s mandatory config
   def openApi4sPackage = "com.example.api"
   // openApi4s optional config
-  //def openApi4sUrl: T[String] = T((millSourcePath / "resources" / "openapi.json").wrapped.toUri.toString)
+  //def openApi4sFile: T[PathRef] = Task(PathRef(millSourcePath / "resources" / "openapi.json"))
   //def openApi4sTargetDir: T[os.Path] = T(millSourcePath / "src")
   //def openApi4sGenerator: T[String] = "sharaf"
 }
