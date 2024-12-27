@@ -13,6 +13,8 @@ OpenApi generators for Scala.
 ## Limitations
 - JSON only
 - only *named* entities, no anonymous objects
+- no comments in source code (scalameta limitation)
+- scalafmt is almost mandatory (if you care about nice/minimal git diffs)
 
 ---
 
