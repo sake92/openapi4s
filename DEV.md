@@ -27,7 +27,7 @@ git push --atomic origin main --tags
 
 # prepare for NEXT version
 # bump publishVersion to x.y.z-SNAPSHOT
-$VERSION="0.0.12-SNAPSHOT"
+$VERSION="0.1.1-SNAPSHOT"
 git commit -m"Bump version to $VERSION"
 
 ```
