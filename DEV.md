@@ -19,15 +19,15 @@ TODOs:
 
 # RELEASE
 # bump publishVersion to x.y.z !!!
-$VERSION="0.0.9"
-git commit --allow-empty -am "Release $VERSION"
+$VERSION="0.0.10"
+git commit --allow-empty -m "Release $VERSION"
 git tag -a $VERSION -m "Release $VERSION"
 git push --atomic origin main --tags
 
 
 # prepare for NEXT version
 # bump publishVersion to x.y.z-SNAPSHOT
-$VERSION="0.0.10-SNAPSHOT"
-git commit -am"Bump version to $VERSION"
+$VERSION="0.0.12-SNAPSHOT"
+git commit -m"Bump version to $VERSION"
 
 ```

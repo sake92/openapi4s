@@ -25,7 +25,21 @@ https://github.com/user-attachments/assets/f7f6f1c7-1c00-4b34-b725-faed4cc28db7
 ## Generators
 
 ### Sharaf backend
+Supports almost all features:
+- controllers
+- discriminated models (sealed traits)
+- enums (scala3 singleton enums)
+- validations
+- query params
 
+### Http4s backend
+Supports some features:
+- routes (controllers)
+- discriminated models (sealed traits)
+- enums (scala3 singleton enums)
+
+TODO: query params, validation..  
+Contributions welcome!
 
 ---
 
@@ -44,14 +58,21 @@ import ba.sake.openapi4s.OpenApiGeneratorModule
 object api extends ScalaModule with OpenApiGeneratorModule {
   def scalaVersion = "3.6.2"
   def ivyDeps = Agg(
+    // sharaf
     ivy"ba.sake::sharaf:0.8.0"
+    // http4s
+    ivy"org.http4s::http4s-ember-server:0.23.29",
+    ivy"org.http4s::http4s-circe:0.23.29",
+    ivy"org.http4s::http4s-dsl:0.23.29"
   )
-  // openApi4s mandatory config
+  /* mandatory config */
   def openApi4sPackage = "com.example.api"
-  // openApi4s optional config
+  
+  /* optional config */
+  //def openApi4sGenerator: T[String] = "sharaf" // or "http4s"
   //def openApi4sFile: T[PathRef] = Task(PathRef(millSourcePath / "resources" / "openapi.json"))
   //def openApi4sTargetDir: T[os.Path] = T(millSourcePath / "src")
-  //def openApi4sGenerator: T[String] = "sharaf"
+  
 }
 ```
 
