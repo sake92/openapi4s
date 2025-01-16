@@ -18,8 +18,7 @@ TODOs:
 ```sh
 
 # RELEASE
-# bump publishVersion to x.y.z !!!
-$VERSION="0.1.2-SNAPSHOT"
+$VERSION="0.1.2"
 git commit --allow-empty -am "Release $VERSION"
 git tag -a $VERSION -m "Release $VERSION"
 git push --atomic origin main --tags
