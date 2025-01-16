@@ -19,7 +19,7 @@ TODOs:
 
 # RELEASE
 # bump publishVersion to x.y.z !!!
-$VERSION="0.0.10"
+$VERSION="0.1.0"
 git commit --allow-empty -m "Release $VERSION"
 git tag -a $VERSION -m "Release $VERSION"
 git push --atomic origin main --tags
