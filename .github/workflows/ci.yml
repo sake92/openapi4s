@@ -4,6 +4,7 @@ on:
   push:
     branches: main
   pull_request:
+  workflow_call:  # allow this workflow to be called from other workflows
 
 jobs:
   test:
