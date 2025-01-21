@@ -2,9 +2,7 @@
 
 OpenApi generators for Scala.
 
-Here is a small demo (sorry for awful quality, will fix later):
-
-https://github.com/user-attachments/assets/f7f6f1c7-1c00-4b34-b725-faed4cc28db7
+Here is a small video demo: https://youtu.be/kf0vGrlKNb8
 
 ## Features and Benefits
 - incremental generator
