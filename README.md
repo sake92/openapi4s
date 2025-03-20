@@ -48,12 +48,12 @@ Contributions welcome!
 ```scala
 package build
 
-import $ivy.`ba.sake::mill-openapi4s::0.0.9`
+import $ivy.`ba.sake::mill-openapi4s::0.2.0`
 import mill._
-import mill.scalalib._
+import mill.scalalib._, scalafmt._
 import ba.sake.openapi4s.OpenApiGeneratorModule
 
-object api extends ScalaModule with OpenApiGeneratorModule {
+object api extends ScalaModule with OpenApiGeneratorModule with ScalafmtModule {
   def scalaVersion = "3.6.2"
   def ivyDeps = Agg(
     // sharaf
@@ -68,14 +68,15 @@ object api extends ScalaModule with OpenApiGeneratorModule {
   
   /* optional config */
   //def openApi4sGenerator: T[String] = "sharaf" // or "http4s"
-  //def openApi4sFile: T[PathRef] = Task(PathRef(millSourcePath / "resources" / "openapi.json"))
-  //def openApi4sTargetDir: T[os.Path] = T(millSourcePath / "src")
+  //def openApi4sFile = T.source(PathRef(millSourcePath / "resources" / "openapi.json"))
+  //def openApi4sTargetDir: T[PathRef] = T(millSourcePath / "src")
   
 }
 ```
 
 ```shell
-./mill -i api.openApi4sGenerate
-./mill -i api.compile
+# preferrably first do a scalafmt for better git-diff
+./mill api.reformat
+./mill api.compile
 ```
 
