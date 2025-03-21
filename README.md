@@ -48,7 +48,7 @@ Contributions welcome!
 ```scala
 package build
 
-import $ivy.`ba.sake::mill-openapi4s::0.2.0`
+import $ivy.`ba.sake::mill-openapi4s::0.3.0`
 import mill._
 import mill.scalalib._, scalafmt._
 import ba.sake.openapi4s.OpenApiGeneratorModule
@@ -59,9 +59,9 @@ object api extends ScalaModule with OpenApiGeneratorModule with ScalafmtModule {
     // sharaf
     ivy"ba.sake::sharaf:0.8.0"
     // http4s
-    ivy"org.http4s::http4s-ember-server:0.23.29",
-    ivy"org.http4s::http4s-circe:0.23.29",
-    ivy"org.http4s::http4s-dsl:0.23.29"
+    //ivy"org.http4s::http4s-ember-server:0.23.29",
+    //ivy"org.http4s::http4s-circe:0.23.29",
+    //ivy"org.http4s::http4s-dsl:0.23.29"
   )
   /* mandatory config */
   def openApi4sPackage = "com.example.api"
@@ -74,9 +74,8 @@ object api extends ScalaModule with OpenApiGeneratorModule with ScalafmtModule {
 }
 ```
 
+Files will be generated at compile time, whenever the `openapi.json` file changes:
 ```shell
-# preferrably first do a scalafmt for better git-diff
-./mill api.reformat
 ./mill api.compile
 ```
 
