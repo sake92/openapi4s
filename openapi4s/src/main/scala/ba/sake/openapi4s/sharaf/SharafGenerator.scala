@@ -42,7 +42,10 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
       Option.when(modelSources.nonEmpty) {
         GeneratedFileSource(
           Paths.get(s"models/${namedSchemaName}.scala"),
-          source""" package ${modelsPkg} { ..${allStmts} } """
+          source"""
+            // generated with OpenApi4s
+            package ${modelsPkg} { ..${allStmts} }
+          """
         )
       }
     }
@@ -171,7 +174,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
         .getOrElse(q"Response.withStatus(StatusCodes.NOT_IMPLEMENTED)")
       val routeStmts = queryParamStmts ++ reqBodyStmts ++ List(resBodyExpr)
       val pathDefCase =
-        p"""case ${methodExtractor}() -> Path(..${pathSegmentPatternsClause}) =>
+        p"""case ${methodExtractor} -> Path(..${pathSegmentPatternsClause}) =>
                 { ..${routeStmts} }
         """
       pathDefCase
@@ -192,6 +195,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
       GeneratedFileSource(
         Paths.get(s"controllers/${controllerName}.scala"),
         source"""
+        // generated with OpenApi4s
         package ${pkg} {
             ..${imports}
 
