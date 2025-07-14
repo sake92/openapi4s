@@ -21,6 +21,6 @@ TODOs:
 $VERSION="0.4.0"
 git commit --allow-empty -am "Release $VERSION"
 git tag -a $VERSION -m "Release $VERSION"
-git push --atomic origin main --tags
+git push --atomic origin main $VERSION
 
 ```
