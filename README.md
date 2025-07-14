@@ -43,37 +43,8 @@ Contributions welcome!
 
 ### Mill plugin
 
-```scala
-package build
+See https://github.com/sake92/mill-openapi4s
 
-import $ivy.`ba.sake::mill-openapi4s::0.3.0`
-import mill._
-import mill.scalalib._, scalafmt._
-import ba.sake.openapi4s.OpenApiGeneratorModule
 
-object api extends ScalaModule with OpenApiGeneratorModule with ScalafmtModule {
-  def scalaVersion = "3.6.2"
-  def ivyDeps = Agg(
-    // sharaf
-    ivy"ba.sake::sharaf:0.8.0"
-    // http4s
-    //ivy"org.http4s::http4s-ember-server:0.23.29",
-    //ivy"org.http4s::http4s-circe:0.23.29",
-    //ivy"org.http4s::http4s-dsl:0.23.29"
-  )
-  /* mandatory config */
-  def openApi4sPackage = "com.example.api"
-  
-  /* optional config */
-  //def openApi4sGenerator: T[String] = "sharaf" // or "http4s"
-  //def openApi4sFile = T.source(PathRef(millSourcePath / "resources" / "openapi.json"))
-  //def openApi4sTargetDir: T[PathRef] = T(millSourcePath / "src")
-  
-}
-```
 
-Files will be generated at compile time, whenever the `openapi.json` file changes:
-```shell
-./mill api.compile
-```
 
