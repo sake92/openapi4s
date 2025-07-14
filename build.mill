@@ -1,68 +1,27 @@
+//| mill-version: 1.0.0
 package build
 
-import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.4.1`
+import mill.*
+import mill.scalalib.*
+import mill.scalalib.publish.*
+import mill.util.VcsVersion
 
-import mill._
-import mill.scalalib._
-import mill.scalalib.scalafmt._
-import mill.scalalib.publish._
-import de.tobiasroeser.mill.vcs.version.VcsVersion
-
-val millVersion = "0.12.0"
-
-object openapi4s extends SbtModule with ScalafmtModule with Openapi4sPublishModule {
+object openapi4s extends SbtModule with Openapi4sPublishModule {
   def scalaVersion = "2.13.15"
-  def ivyDeps = Agg(
-    ivy"ba.sake::regenesca:0.6.1",
-    ivy"io.swagger.parser.v3:swagger-parser:2.1.24",
-    ivy"org.apache.commons:commons-text:1.12.0"
-  )
+  def mvnDeps = Task {
+    Seq(
+      mvn"ba.sake::regenesca:0.6.1",
+      mvn"io.swagger.parser.v3:swagger-parser:2.1.24",
+      mvn"org.apache.commons:commons-text:1.12.0"
+    )
+  }
 
   object test extends SbtTests with TestModule.Munit {
-    def ivyDeps = Agg(
-      ivy"org.scalameta::munit::1.0.2",
-      ivy"com.lihaoyi::pprint:0.9.0"
+    def mvnDeps = Seq(
+      mvn"org.scalameta::munit::1.0.2",
+      mvn"com.lihaoyi::pprint:0.9.0"
     )
   }
-}
-
-object `mill-plugin` extends ScalaModule with ScalafmtModule with Openapi4sPublishModule {
-
-  def scalaVersion = "2.13.15"
-  def scalacOptions = Seq("-Ywarn-unused", "-deprecation")
-  def ivyDeps = Agg(ivy"com.lihaoyi:mill-dist:${millVersion}")
-  def moduleDeps = Seq(openapi4s)
-
-  def artifactName = "mill-openapi4s"
-  def platformSuffix = "_mill" + mill.main.BuildInfo.millBinPlatform
-
-  object test extends ScalaTests with TestModule.Munit {
-    def ivyDeps = Agg(
-      ivy"com.lihaoyi::mill-testkit:${millVersion}",
-      ivy"org.scalameta::munit:1.0.2"
-    )
-    def forkEnv = Task {
-      val millAssemblyPath = millExecutable.assembly().path
-      val millExecPath =
-        if (scala.util.Properties.isWin) {
-          val batPath = millAssemblyPath / os.up / (millAssemblyPath.baseName + ".bat")
-          os.copy.over(millAssemblyPath, batPath)
-          batPath.toString
-        } else millAssemblyPath.toString
-      Map("MILL_EXECUTABLE_PATH" -> millExecPath)
-    }
-
-    object millExecutable extends JavaModule {
-      def ivyDeps = Agg(ivy"com.lihaoyi:mill-dist:${millVersion}")
-      def mainClass = Some("mill.runner.client.MillClientMain")
-      def resources = Task {
-        val p = Task.dest / "mill/local-test-overrides" / s"ba.sake-${`mill-plugin`.artifactId()}"
-        os.write(p, `mill-plugin`.localClasspath().map(_.path).mkString("\n"), createFolders = true)
-        Seq(PathRef(Task.dest))
-      }
-    }
-  }
-
 }
 
 trait Openapi4sPublishModule extends PublishModule {
