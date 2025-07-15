@@ -1,3 +1,5 @@
+package ba.sake.openapi4s.cli
+
 import ba.sake.openapi4s.OpenApiGenerator
 
 import java.nio.file.Paths
