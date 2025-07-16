@@ -45,7 +45,7 @@ Contributions welcome!
 
 See https://github.com/sake92/mill-openapi4s
 
-## CLI
+### CLI
 
 You can use `openapi4s-cli` with Coursier launcher to generate your sources:
 
