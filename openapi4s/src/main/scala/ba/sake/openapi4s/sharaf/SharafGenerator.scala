@@ -164,14 +164,14 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
               fallbackAnyType = t"JValue"
             )
             val todoBody = Lit.String(s"TODO: return ${tpe}")
-            Some(q"""Response.withStatus(StatusCodes.NotImplemented).withBody(${todoBody})""")
+            Some(q"""Response.withStatus(StatusCode.NotImplemented).withBody(${todoBody})""")
           } catch {
             case e: UnsupportedSchemaException =>
               println(e.toString)
               None
           }
         }
-        .getOrElse(q"Response.withStatus(StatusCodes.NotImplemented)")
+        .getOrElse(q"Response.withStatus(StatusCode.NotImplemented)")
       val routeStmts = queryParamStmts ++ reqBodyStmts ++ List(resBodyExpr)
       val pathDefCase =
         p"""case ${methodExtractor} -> Path(..${pathSegmentPatternsClause}) =>
