@@ -31,6 +31,7 @@ object cli extends SbtModule with Openapi4sPublishModule {
   def mvnDeps = Seq(
     mvn"com.lihaoyi::mainargs:0.7.6"
   )
+  def mainClass = Some("ba.sake.openapi4s.cli.OpenApi4sMain")
 }
 
 trait Openapi4sPublishModule extends PublishModule {
