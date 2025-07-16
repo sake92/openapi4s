@@ -50,7 +50,7 @@ See https://github.com/sake92/mill-openapi4s
 You can use `openapi4s-cli` with Coursier launcher to generate your sources:
 
 ```shell
-cs launch ba.sake::openapi4s-cli:0.6.1 -M ba.sake.openapi4s.cli.OpenApi4sMain \
+cs launch ba.sake::openapi4s-cli:0.6.1 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --generator sharaf \
   --url openapi.json \
   --baseFolder src \
