@@ -35,4 +35,10 @@ class OpenApiDefinitionSuite extends munit.FunSuite {
     }
   }
 
+  test("should parse Spring Petclinic OpenAPI definition") {
+    val openapi = OpenApiDefinition.parse(TestUtils.getResourceUrl("spring_petclinic.yaml"))
+    pprint.pprintln(openapi.namedSchemaDefinitions)
+    assert(true)
+  }
+
 }

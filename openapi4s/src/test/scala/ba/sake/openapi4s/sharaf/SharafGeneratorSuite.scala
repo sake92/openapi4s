@@ -45,4 +45,24 @@ class SharafGeneratorSuite extends munit.FunSuite {
       println(source.source.syntax)
     }
   }
+
+  test("generateSources should generate from spring_petclinic.yaml") {
+    val config = OpenApiGenerator.Config(
+      url = TestUtils.getResourceUrl("spring_petclinic.yaml"),
+      baseFolder = Paths.get("app"),
+      basePackage = "pkg"
+    )
+    val openapiDefinition = OpenApiDefinition.parse(config.url)
+    val generator = new SharafGenerator(config, openapiDefinition)
+    val sources = generator.generateSources
+    println("*" * 100)
+    println("Generated Sharaf sources for spring_petclinic.yaml :")
+    sources.foreach { source =>
+      println("*" * 50)
+      print("*" * 20)
+      print(source.file.getFileName)
+      println("*" * 20)
+      println(source.source.syntax)
+    }
+  }
 }

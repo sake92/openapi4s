@@ -299,6 +299,23 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
           """,
           q"""  object ${termName} { ..${oneOfCases} } """
         )
+      case allOfSchema: SchemaDefinition.AllOf =>
+        val allOfCases: List[SchemaDefinition] = allOfSchema.schemas.flatMap {
+          case SchemaDefinition.Ref(refName) =>
+            openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName).map(_.schema)
+          case obj: SchemaDefinition.Obj => Some(obj)
+          case other =>
+            println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+            None
+        }
+        val mergedSchemasProps: List[SchemaProperty] = allOfCases.flatMap {
+          case SchemaDefinition.Obj(props) => props
+          case other => 
+            println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+            List.empty
+        }
+        
+        generateModelSources(SchemaDefinition.Named(namedSchemaName, SchemaDefinition.Obj(mergedSchemasProps)), superType)
     }
     generatedNamedSchemas += namedSchemaName
     generatedModelSources

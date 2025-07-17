@@ -18,6 +18,7 @@ class SchemaDefinitionResolver {
         case enm: SchemaDefinition.Enum    => Some(SchemaDefinition.Named(schemaKey, enm))
         case arr: SchemaDefinition.Arr     => Some(SchemaDefinition.Named(schemaKey, arr))
         case oneOf: SchemaDefinition.OneOf => Some(SchemaDefinition.Named(schemaKey, oneOf))
+        case allOf: SchemaDefinition.AllOf => Some(SchemaDefinition.Named(schemaKey, allOf))
         case other =>
           println(
             s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!"
@@ -45,7 +46,10 @@ class SchemaDefinitionResolver {
       case _: ObjectSchema =>
         getObjectSchema(schema, context)
       case _: ComposedSchema =>
-        getComposedSchema(schema, context)
+        getComposedSchema(schema, context).getOrElse {
+          println(s"Unsupported composed schema at ${context}. Returning Unknown schema.")
+          SchemaDefinition.Unknown()
+        }
       // OpenApi 3.1 complicates this a bit
       case jsonSchema: JsonSchema =>
         val types = Option(jsonSchema.getTypes).map(_.asScala).getOrElse(Set.empty)
@@ -69,10 +73,7 @@ class SchemaDefinitionResolver {
                 throw new UnsupportedSchemaDefinitionException(s"Null is unsupported [${context}]")
             }
           case None =>
-            Option(schema.getOneOf)
-              .map { _ =>
-                getComposedSchema(schema, context)
-              }
+            getComposedSchema(schema, context)
               .orElse {
                 Option(schema.get$ref)
                   .map { refName =>
@@ -168,7 +169,13 @@ class SchemaDefinitionResolver {
     SchemaDefinition.Obj(properties)
   }
 
-  private def getComposedSchema(schema: Schema[?], context: String): SchemaDefinition.OneOf = {
+  private def getComposedSchema(schema: Schema[?], context: String): Option[SchemaDefinition] = {
+    Option(schema.getOneOf())
+      .map(_ => getOneOfSchema(schema, context))
+      .orElse(Option(schema.getAllOf()).map(_ => getAllOfSchema(schema, context)))
+  }
+
+  private def getOneOfSchema(schema: Schema[?], context: String): SchemaDefinition.OneOf = {
     val schemas =
       Option(schema.getOneOf).map(_.asScala).getOrElse(List.empty).map(s => resolveSchema(s, context)).toList
     val discriminatorPropertyName = Option(schema.getDiscriminator).map(_.getPropertyName).getOrElse {
@@ -176,6 +183,12 @@ class SchemaDefinitionResolver {
       "@type"
     }
     SchemaDefinition.OneOf(schemas, discriminatorPropertyName = discriminatorPropertyName)
+  }
+
+  private def getAllOfSchema(schema: Schema[?], context: String): SchemaDefinition.AllOf = {
+    val schemas =
+      Option(schema.getAllOf).map(_.asScala).getOrElse(List.empty).map(s => resolveSchema(s, context)).toList
+    SchemaDefinition.AllOf(schemas)
   }
 
   private def getArraySchema(schema: Schema[?], context: String): SchemaDefinition.Arr = {

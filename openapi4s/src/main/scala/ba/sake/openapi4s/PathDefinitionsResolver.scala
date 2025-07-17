@@ -24,7 +24,9 @@ class PathDefinitionsResolver(
             /* request */
             val reqBody =
               Option(operation.getRequestBody)
-                .flatMap(b => Option(b.getContent.get(ApplicationJson)))
+                .flatMap(b => Option(b.getContent))
+                .map(_.get(ApplicationJson))
+                .flatMap(Option(_)) // java is a minefield of nulls
                 .flatMap { mediaType =>
                   val bodySchema =
                     schemaDefinitionResolver.resolveSchema(mediaType.getSchema, s"path ${method} '${pathKey}' req body")
@@ -56,6 +58,7 @@ class PathDefinitionsResolver(
               .flatMap { case (_, apiResponse) =>
                 Option(apiResponse.getContent)
                   .map(_.get(ApplicationJson))
+                  .flatMap(Option(_))
                   .flatMap { mediaType =>
                     try {
                       val bodySchema =

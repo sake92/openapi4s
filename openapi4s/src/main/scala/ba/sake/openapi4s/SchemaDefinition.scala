@@ -29,6 +29,8 @@ object SchemaDefinition {
   case class Arr(schema: SchemaDefinition, minItems: Option[Int], maxItems: Option[Int], uniqueItems: Boolean)
       extends NameableSchemaDefinition
   case class OneOf(schemas: List[SchemaDefinition], discriminatorPropertyName: String) extends NameableSchemaDefinition
+  case class AllOf(schemas: List[SchemaDefinition]) extends NameableSchemaDefinition
+
   // invented here
   case class Named(name: String, schema: NameableSchemaDefinition) extends SchemaDefinition
   case class Unknown() extends SchemaDefinition
