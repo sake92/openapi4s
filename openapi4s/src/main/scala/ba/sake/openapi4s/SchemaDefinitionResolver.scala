@@ -21,7 +21,7 @@ class SchemaDefinitionResolver {
         case allOf: SchemaDefinition.AllOf => Some(SchemaDefinition.Named(schemaKey, allOf))
         case other =>
           println(
-            s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!"
+            s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!!"
           )
           None
       }
@@ -93,7 +93,7 @@ class SchemaDefinitionResolver {
             SchemaDefinition.Ref(refTpeName)
           }
           .getOrElse {
-            println(s"Unknown type at ${context}")
+            println(s"Unknown type at ${context} (${schema.getClass})")
             SchemaDefinition.Unknown()
           }
 
