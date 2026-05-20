@@ -1,7 +1,7 @@
 package ba.sake.openapi4s
 
 import java.nio.file.{Files, Path, Paths}
-import scala.jdk.CollectionConverters.*
+import scala.jdk.CollectionConverters._
 
 class OpenApiGeneratorSuite extends munit.FunSuite {
 

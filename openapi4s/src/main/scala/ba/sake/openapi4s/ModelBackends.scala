@@ -1,6 +1,6 @@
 package ba.sake.openapi4s
 
-import ba.sake.openapi4s.OpenApiGenerator.*
+import ba.sake.openapi4s.OpenApiGenerator._
 import ba.sake.openapi4s.http4s.Http4sGenerator
 import ba.sake.openapi4s.sharaf.SharafGenerator
 import ba.sake.regenesca.GeneratedFileSource
