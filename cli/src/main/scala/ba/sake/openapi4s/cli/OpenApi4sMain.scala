@@ -22,9 +22,9 @@ object OpenApi4sMain {
       @arg(doc = "Base package for generated sources")
       basePackage: String
   ) = {
+    val defaultMapped = ("tupson", "sharaf")
     val (mappedModels, mappedFramework) = generator.toLowerCase match {
-      case ""       => ("tupson", "sharaf")
-      case "sharaf" => ("tupson", "sharaf")
+      case "" | "sharaf" => defaultMapped
       case "http4s" => ("circe", "http4s")
       case other =>
         throw new RuntimeException(s"Unknown generator '${other}'. Available generators: 'http4s', 'sharaf'")
