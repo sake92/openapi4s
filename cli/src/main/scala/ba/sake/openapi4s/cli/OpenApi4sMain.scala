@@ -13,7 +13,7 @@ object OpenApi4sMain {
       models: String = "",
       @arg(doc = "Framework backend: 'http4s', 'sharaf' or 'none'. If unset, defaults to 'sharaf' (or mapped by --generator).")
       framework: String = "",
-      @arg(doc = "deprecated legacy generator mapping: 'sharaf' => models=tupson+framework=sharaf, 'http4s' => models=circe+framework=http4s")
+      @arg(doc = "Deprecated legacy generator mapping: 'sharaf' => models=tupson+framework=sharaf, 'http4s' => models=circe+framework=http4s")
       generator: String = "",
       @arg(doc = "OpenAPI URL or file path. Default is 'openapi.json'")
       url: String = "openapi.json",

@@ -177,18 +177,19 @@ object OpenApiGenerator {
   ): Unit = {
     val modelFlavor = modelBackendOpt.map(_.flavor).getOrElse(ModelFlavor.External)
     frameworkBackendOpt.foreach { frameworkBackend =>
-      // with models=none we cannot infer compatibility, so we only emit the explicit external-model warning below
-      if (modelFlavor != ModelFlavor.External && frameworkBackend.requiredModelFlavor != modelFlavor) {
-        System.err.println(
-          s"WARNING: potentially incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
-            s"Framework '${frameworkBackend.id}' typically expects models flavor '${ModelFlavor.asString(frameworkBackend.requiredModelFlavor)}'."
-        )
-      }
-      if (modelFlavor == ModelFlavor.External) {
-        System.err.println(
-          s"WARNING: models=none with framework='${frameworkBackend.id}'. " +
-            s"Generation will reference ${config.basePackage}.models types that must already exist."
-        )
+      modelFlavor match {
+        case ModelFlavor.External =>
+          // with models=none we cannot infer compatibility, so emit explicit external-model warning
+          System.err.println(
+            s"WARNING: models=none with framework='${frameworkBackend.id}'. " +
+              s"Generation will reference ${config.basePackage}.models types that must already exist."
+          )
+        case _ if frameworkBackend.requiredModelFlavor != modelFlavor =>
+          System.err.println(
+            s"WARNING: potentially incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
+              s"Framework '${frameworkBackend.id}' typically expects models flavor '${ModelFlavor.asString(frameworkBackend.requiredModelFlavor)}'."
+          )
+        case _ => ()
       }
     }
   }
