@@ -71,6 +71,7 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
   }
 
   test("composed generator should allow circe + sharaf") {
+    // This combination intentionally emits a compatibility warning to stderr, but generation should still succeed.
     val baseFolder = Files.createTempDirectory("openapi4s-circe-sharaf")
     val config = OpenApiGenerator.Config(
       url = TestUtils.getResourceUrl("petstore_3.0.0.json"),

@@ -129,21 +129,7 @@ object OpenApiGenerator {
       )
     }
 
-    val modelFlavor = modelBackendOpt.map(_.flavor).getOrElse(ModelFlavor.External)
-    frameworkBackendOpt.foreach { frameworkBackend =>
-      if (modelFlavor != ModelFlavor.External && frameworkBackend.requiredModelFlavor != modelFlavor) {
-        System.err.println(
-          s"WARNING: potentially incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
-            s"Framework '${frameworkBackend.id}' typically expects models flavor '${ModelFlavor.asString(frameworkBackend.requiredModelFlavor)}'."
-        )
-      }
-      if (modelFlavor == ModelFlavor.External) {
-        System.err.println(
-          s"WARNING: models=none with framework='${frameworkBackend.id}'. " +
-            s"Generation will reference ${config.basePackage}.models types that must already exist."
-        )
-      }
-    }
+    validateBackendCompatibility(config, modelBackendOpt, frameworkBackendOpt)
 
     new ComposedOpenApiGenerator(config, modelBackendOpt, frameworkBackendOpt)
   }
@@ -181,6 +167,29 @@ object OpenApiGenerator {
       println(
         s"Finished generating OpenApi for '${config.url}' with models='${config.models}', framework='${config.framework}'."
       )
+    }
+  }
+
+  private def validateBackendCompatibility(
+      config: Config,
+      modelBackendOpt: Option[ModelBackend],
+      frameworkBackendOpt: Option[FrameworkBackend]
+  ): Unit = {
+    val modelFlavor = modelBackendOpt.map(_.flavor).getOrElse(ModelFlavor.External)
+    frameworkBackendOpt.foreach { frameworkBackend =>
+      // with models=none we cannot infer compatibility, so we only emit the explicit external-model warning below
+      if (modelFlavor != ModelFlavor.External && frameworkBackend.requiredModelFlavor != modelFlavor) {
+        System.err.println(
+          s"WARNING: potentially incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
+            s"Framework '${frameworkBackend.id}' typically expects models flavor '${ModelFlavor.asString(frameworkBackend.requiredModelFlavor)}'."
+        )
+      }
+      if (modelFlavor == ModelFlavor.External) {
+        System.err.println(
+          s"WARNING: models=none with framework='${frameworkBackend.id}'. " +
+            s"Generation will reference ${config.basePackage}.models types that must already exist."
+        )
+      }
     }
   }
 
