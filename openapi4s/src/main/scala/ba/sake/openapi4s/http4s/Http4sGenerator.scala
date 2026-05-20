@@ -200,10 +200,7 @@ class Http4sGenerator(
       q"import cats.effect.IO",
       q"import org.http4s.HttpRoutes",
       q"import org.http4s.dsl.io._"
-    ) ++ frameworkModelImports ++ List[Import]({
-        val importer = s"${config.basePackage}.models.*".parse[Importer].get
-        q"import ..${List(importer)}"
-      })
+    ) ++ frameworkModelImports ++ List(GenerationImports.modelWildcardImport(config.basePackage))
     List(
       GeneratedFileSource(
         Paths.get(s"routes/${controllerName}.scala"),

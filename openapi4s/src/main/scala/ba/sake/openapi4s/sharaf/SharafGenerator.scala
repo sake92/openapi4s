@@ -185,10 +185,7 @@ class SharafGenerator(
       q"import ba.sake.querson.QueryStringRW",
       q"import ba.sake.validson.Validator",
       q"import ba.sake.sharaf.*, routing.*"
-    ) ++ frameworkModelImports ++ List[Import]({
-        val importer = s"${config.basePackage}.models.*".parse[Importer].get
-        q"import ..${List(importer)}"
-      })
+    ) ++ frameworkModelImports ++ List(GenerationImports.modelWildcardImport(config.basePackage))
     List(
       GeneratedFileSource(
         Paths.get(s"controllers/${controllerName}.scala"),

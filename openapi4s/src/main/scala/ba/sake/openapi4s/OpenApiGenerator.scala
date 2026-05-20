@@ -175,7 +175,7 @@ object OpenApiGenerator {
         // with models=none we cannot infer compatibility, so emit explicit external-model warning
         System.err.println(
           s"WARNING: models=none with framework='${frameworkBackend.id}'. " +
-            s"Generation will reference ${config.basePackage}.models types that must already exist."
+            s"Generation will reference expected model types under ${config.basePackage}.models that must already exist."
         )
       } else if (frameworkBackend.requiredModelFlavor != modelFlavor) {
         System.err.println(
