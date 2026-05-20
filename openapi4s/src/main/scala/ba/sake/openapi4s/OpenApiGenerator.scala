@@ -175,12 +175,14 @@ object OpenApiGenerator {
         // with models=none we cannot infer compatibility, so emit explicit external-model warning
         System.err.println(
           s"WARNING: models=none with framework='${frameworkBackend.id}'. " +
-            s"Generation will reference expected model types under ${config.basePackage}.models that must already exist."
+            s"Generation will reference expected model types under ${config.basePackage}.models that must already exist. " +
+            s"Ensure those model classes/instances are available or generation output may not compile."
         )
       } else if (frameworkBackend.requiredModelFlavor != modelFlavor) {
         System.err.println(
           s"WARNING: potentially incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
-            s"Framework '${frameworkBackend.id}' typically expects models flavor '${ModelFlavor.asString(frameworkBackend.requiredModelFlavor)}'."
+            s"Framework '${frameworkBackend.id}' typically expects models flavor '${ModelFlavor.asString(frameworkBackend.requiredModelFlavor)}'. " +
+            s"Generated sources may require manual import/type adjustments; prefer matching model/framework flavors when possible."
         )
       }
     }

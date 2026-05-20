@@ -32,7 +32,7 @@ object OpenApi4sMain {
     val finalModels = if (models.nonEmpty) models else mappedModels
     val finalFramework = if (framework.nonEmpty) framework else mappedFramework
     if (generator.nonEmpty) {
-      System.err.println("WARNING: '--generator' is deprecated. Prefer '--models' and '--framework'.")
+      System.err.println("WARNING: '--generator' is deprecated since 0.7.0. Prefer '--models' and '--framework'.")
     }
     val openApiGenerator = OpenApiGenerator(
       config = OpenApiGenerator.Config(
