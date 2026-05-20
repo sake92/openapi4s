@@ -57,7 +57,7 @@ class TupsonModelGenerator(openApiDefinition: OpenApiDefinition) {
           }
         }
         // validation
-        val validatorStmts = SchemaUtils.generateValidatorStmts(typeName, obj.properties.map(p => (p.name, p.schema)))
+        val validatorStmts = SchemaUtils.generateValidsonStms(typeName, obj.properties.map(p => (p.name, p.schema)))
         val classDefinition = superType match {
           case Some(st) =>
             val extendsInit = init"${st}()"

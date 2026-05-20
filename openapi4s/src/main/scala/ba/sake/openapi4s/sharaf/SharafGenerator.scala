@@ -121,7 +121,7 @@ class SharafGenerator(
           // validation
           // TODO figure out how to validate Option-al nicely
           val validatedQPs = pathDef.queryParams.filter(_.required).map(qp => (qp.name, qp.schema))
-          val validatorStmts = SchemaUtils.generateValidatorStmts(t"QP", validatedQPs)
+          val validatorStmts = SchemaUtils.generateValidsonStms(t"QP", validatedQPs)
           adhocEnums.flatten ++
             List(q"case class QP(..${qpParams}) derives QueryStringRW") ++
             Option.when(validatorStmts.nonEmpty)(q""" object QP { ..${validatorStmts} } """).toList ++

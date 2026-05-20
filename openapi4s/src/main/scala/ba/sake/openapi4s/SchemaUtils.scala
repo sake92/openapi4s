@@ -60,7 +60,7 @@ object SchemaUtils {
     s"${camelizedParentType}${camelizedPropName}"
   }
 
-  def generateValidatorStmts(typeName: Type, properties: List[(String, SchemaDefinition)]): List[Stat] = {
+  def generateValidsonStms(typeName: Type, properties: List[(String, SchemaDefinition)]): List[Stat] = {
     val validationCalls = properties.flatMap { case (name, schema) =>
       val propName = Term.Name(name)
       schema match {
