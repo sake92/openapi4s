@@ -19,6 +19,12 @@ object OpenApiGenerator {
     case object Circe extends ModelFlavor
     case object Tupson extends ModelFlavor
     case object External extends ModelFlavor
+
+    def asString(modelFlavor: ModelFlavor): String = modelFlavor match {
+      case Circe    => "circe"
+      case Tupson   => "tupson"
+      case External => "external"
+    }
   }
 
   case class ModelContract(
@@ -128,7 +134,7 @@ object OpenApiGenerator {
       if (modelFlavor != ModelFlavor.External && frameworkBackend.requiredModelFlavor != modelFlavor) {
         System.err.println(
           s"WARNING: potentially incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
-            s"Framework '${frameworkBackend.id}' typically expects models flavor '${frameworkBackend.requiredModelFlavor.toString.toLowerCase}'."
+            s"Framework '${frameworkBackend.id}' typically expects models flavor '${ModelFlavor.asString(frameworkBackend.requiredModelFlavor)}'."
         )
       }
       if (modelFlavor == ModelFlavor.External) {

@@ -9,9 +9,9 @@ object OpenApi4sMain {
 
   @main
   def run(
-      @arg(doc = "Model backend: 'circe', 'tupson' or 'none'. Default is 'tupson'")
+      @arg(doc = "Model backend: 'circe', 'tupson' or 'none'. If unset, defaults to 'tupson' (or mapped by --generator).")
       models: String = "",
-      @arg(doc = "Framework backend: 'http4s', 'sharaf' or 'none'. Default is 'sharaf'")
+      @arg(doc = "Framework backend: 'http4s', 'sharaf' or 'none'. If unset, defaults to 'sharaf' (or mapped by --generator).")
       framework: String = "",
       @arg(doc = "deprecated legacy generator mapping: 'sharaf' => models=tupson+framework=sharaf, 'http4s' => models=circe+framework=http4s")
       generator: String = "",
