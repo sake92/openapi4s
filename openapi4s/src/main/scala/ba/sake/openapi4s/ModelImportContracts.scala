@@ -1,6 +1,7 @@
 package ba.sake.openapi4s
 
 import scala.meta._
+import scala.meta.dialects.Scala34
 
 case class ModelImportContract(
     modelFileImports: List[Import],

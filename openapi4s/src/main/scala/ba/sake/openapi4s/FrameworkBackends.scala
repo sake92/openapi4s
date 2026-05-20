@@ -1,8 +1,19 @@
 package ba.sake.openapi4s
 
-import ba.sake.openapi4s.OpenApiGenerator._
+import ba.sake.openapi4s.OpenApiGenerator.{Config, ModelFlavor, ModelContract}
 import ba.sake.openapi4s.http4s.Http4sGenerator
 import ba.sake.openapi4s.sharaf.SharafGenerator
+import ba.sake.regenesca.GeneratedFileSource
+
+trait FrameworkBackend {
+  def id: String
+  def requiredModelFlavor: ModelFlavor
+  def generateSources(
+      config: Config,
+      openapiDefinition: OpenApiDefinition,
+      modelContract: ModelContract
+  ): Seq[GeneratedFileSource]
+}
 
 object FrameworkBackends {
   private val RoutesPrefix = "routes/"
@@ -15,7 +26,7 @@ object FrameworkBackends {
         config: Config,
         openapiDefinition: OpenApiDefinition,
         modelContract: ModelContract
-    ): Seq[ba.sake.regenesca.GeneratedFileSource] = {
+    ): Seq[GeneratedFileSource] = {
       new Http4sGenerator(
         config = config,
         openApiDefinition = openapiDefinition,
@@ -32,7 +43,7 @@ object FrameworkBackends {
         config: Config,
         openapiDefinition: OpenApiDefinition,
         modelContract: ModelContract
-    ): Seq[ba.sake.regenesca.GeneratedFileSource] = {
+    ): Seq[GeneratedFileSource] = {
       new SharafGenerator(
         config = config,
         openApiDefinition = openapiDefinition,

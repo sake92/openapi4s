@@ -27,24 +27,6 @@ object OpenApiGenerator {
       imports: ModelImportContract
   )
 
-  trait ModelBackend {
-    def id: String
-    def flavor: ModelFlavor
-    def imports: ModelImportContract
-    def generateSources(config: Config, openapiDefinition: OpenApiDefinition): Seq[GeneratedFileSource]
-    def contract(config: Config): ModelContract = ModelContract(s"${config.basePackage}.models", flavor, imports)
-  }
-
-  trait FrameworkBackend {
-    def id: String
-    def requiredModelFlavor: ModelFlavor
-    def generateSources(
-        config: Config,
-        openapiDefinition: OpenApiDefinition,
-        modelContract: ModelContract
-    ): Seq[GeneratedFileSource]
-  }
-
   private val modelBackends: Map[String, ModelBackend] = ModelBackends.byId
   private val frameworkBackends: Map[String, FrameworkBackend] = FrameworkBackends.byId
 

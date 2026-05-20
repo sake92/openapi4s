@@ -3,13 +3,20 @@ package ba.sake.openapi4s
 import java.nio.file.Paths
 import scala.meta._
 import scala.meta.dialects.Scala34
-import ba.sake.openapi4s.OpenApiGenerator._
+import ba.sake.openapi4s.OpenApiGenerator.{Config, ModelFlavor, ModelContract}
 import ba.sake.openapi4s.circe.CirceModelGenerator
 import ba.sake.openapi4s.tupson.TupsonModelGenerator
 import ba.sake.regenesca.GeneratedFileSource
 
+trait ModelBackend {
+  def id: String
+  def flavor: ModelFlavor
+  def imports: ModelImportContract
+  def generateSources(config: Config, openapiDefinition: OpenApiDefinition): Seq[GeneratedFileSource]
+  def contract(config: Config): ModelContract = ModelContract(s"${config.basePackage}.models", flavor, imports)
+}
+
 object ModelBackends {
-  private given Dialect = Scala34
 
   private def generatePkgSelect(pkg: String): Term.Ref = {
     pkg
