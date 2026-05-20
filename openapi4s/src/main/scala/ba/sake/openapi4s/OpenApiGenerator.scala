@@ -123,9 +123,9 @@ object OpenApiGenerator {
     val modelFlavor = modelBackendOpt.map(_.flavor).getOrElse(ModelFlavor.External)
     frameworkBackendOpt.foreach { frameworkBackend =>
       if (modelFlavor != ModelFlavor.External && frameworkBackend.requiredModelFlavor != modelFlavor) {
-        throw new RuntimeException(
-          s"Incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
-            s"Framework '${frameworkBackend.id}' expects models flavor '${frameworkBackend.requiredModelFlavor.toString.toLowerCase}'."
+        println(
+          s"WARNING: potentially incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
+            s"Framework '${frameworkBackend.id}' typically expects models flavor '${frameworkBackend.requiredModelFlavor.toString.toLowerCase}'."
         )
       }
       if (modelFlavor == ModelFlavor.External) {

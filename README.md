@@ -51,10 +51,29 @@ You can use `openapi4s-cli` with Coursier launcher to generate your sources:
 
 ```shell
 cs launch ba.sake::openapi4s-cli:0.6.1 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
-  --generator sharaf \
+  --models tupson \
+  --framework sharaf \
   --url openapi.json \
   --baseFolder src \
   --basePackage com.example
 ```
 
+You can now combine model and framework generation independently:
 
+```shell
+# circe models + http4s routes
+--models circe --framework http4s
+
+# circe models + sharaf controllers
+--models circe --framework sharaf
+
+# models only
+--models tupson --framework none
+
+# framework only (expects existing com.example.models)
+--models none --framework http4s
+```
+
+`--generator` is still supported as a deprecated compatibility alias:
+- `--generator sharaf` => `--models tupson --framework sharaf`
+- `--generator http4s` => `--models circe --framework http4s`
