@@ -26,7 +26,7 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
     println(s"Finished generating Sharaf server for '${config.url}' OpenApi.")
   }
 
-  private[sharaf] def generateSources: Seq[GeneratedFileSource] = {
+  private[openapi4s] def generateSources: Seq[GeneratedFileSource] = {
     val modelsPkg = generatePkgSelect(s"${config.basePackage}.models")
     val modelImports = List[Import](
       q"import java.time.*",

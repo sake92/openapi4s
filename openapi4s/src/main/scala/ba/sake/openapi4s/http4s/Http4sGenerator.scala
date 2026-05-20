@@ -26,7 +26,7 @@ class Http4sGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
     println(s"Finished generating Http4s server for '${config.url}' OpenApi.")
   }
 
-  private[http4s] def generateSources: Seq[GeneratedFileSource] = {
+  private[openapi4s] def generateSources: Seq[GeneratedFileSource] = {
     val modelsPkg = generatePkgSelect(s"${config.basePackage}.models")
     val modelImports = List[Import](
       q"import java.time.*",
