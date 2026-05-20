@@ -1,6 +1,6 @@
 package ba.sake.openapi4s
 
-import scala.meta.*
+import scala.meta._
 import org.apache.commons.text.CaseUtils
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 

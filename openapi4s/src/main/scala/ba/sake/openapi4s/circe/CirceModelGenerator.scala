@@ -1,7 +1,7 @@
 package ba.sake.openapi4s
 package circe
 
-import scala.meta.*
+import scala.meta._
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 
 class CirceModelGenerator(openApiDefinition: OpenApiDefinition) {

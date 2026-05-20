@@ -1,6 +1,6 @@
 package ba.sake.openapi4s
 
-import scala.meta.*
+import scala.meta._
 
 object GenerationImports {
   def modelWildcardImport(basePackage: String): Import = {

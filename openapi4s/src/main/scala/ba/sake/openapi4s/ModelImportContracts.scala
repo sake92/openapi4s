@@ -1,6 +1,6 @@
 package ba.sake.openapi4s
 
-import scala.meta.*
+import scala.meta._
 
 case class ModelImportContract(
     modelFileImports: List[Import],
