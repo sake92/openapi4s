@@ -1,8 +1,6 @@
 package ba.sake.openapi4s
 
 import java.nio.file.Path
-import ba.sake.openapi4s.http4s.Http4sGenerator
-import ba.sake.openapi4s.sharaf.SharafGenerator
 import ba.sake.regenesca.{GeneratedFileSource, RegenescaGenerator, SourceMerger}
 
 trait OpenApiGenerator {
@@ -10,9 +8,6 @@ trait OpenApiGenerator {
 }
 
 object OpenApiGenerator {
-  private val RoutesPrefix = "routes/"
-  private val ControllersPrefix = "controllers/"
-
   sealed trait ModelFlavor
   object ModelFlavor {
     case object Circe extends ModelFlavor
@@ -50,45 +45,8 @@ object OpenApiGenerator {
     ): Seq[GeneratedFileSource]
   }
 
-  private object Http4sFrameworkBackend extends FrameworkBackend {
-    override val id: String = "http4s"
-    override val requiredModelFlavor: ModelFlavor = ModelFlavor.Circe
-    override def generateSources(
-        config: Config,
-        openapiDefinition: OpenApiDefinition,
-        modelContract: ModelContract
-    ): Seq[GeneratedFileSource] = {
-      new Http4sGenerator(
-        config = config,
-        openApiDefinition = openapiDefinition,
-        modelFileImports = modelContract.imports.modelFileImports,
-        frameworkModelImports = modelContract.imports.frameworkImports(id)
-      ).generateSources.filter(_.file.toString.startsWith(RoutesPrefix))
-    }
-  }
-
-  private object SharafFrameworkBackend extends FrameworkBackend {
-    override val id: String = "sharaf"
-    override val requiredModelFlavor: ModelFlavor = ModelFlavor.Tupson
-    override def generateSources(
-        config: Config,
-        openapiDefinition: OpenApiDefinition,
-        modelContract: ModelContract
-    ): Seq[GeneratedFileSource] = {
-      new SharafGenerator(
-        config = config,
-        openApiDefinition = openapiDefinition,
-        modelFileImports = modelContract.imports.modelFileImports,
-        frameworkModelImports = modelContract.imports.frameworkImports(id)
-      ).generateSources.filter(_.file.toString.startsWith(ControllersPrefix))
-    }
-  }
-
   private val modelBackends: Map[String, ModelBackend] = ModelBackends.byId
-  private val frameworkBackends: Map[String, FrameworkBackend] = Map(
-    "http4s" -> Http4sFrameworkBackend,
-    "sharaf" -> SharafFrameworkBackend
-  )
+  private val frameworkBackends: Map[String, FrameworkBackend] = FrameworkBackends.byId
 
   @deprecated("Use OpenApiGenerator(config) with models/framework fields", since = "0.7.0")
   def apply(name: String, config: Config): OpenApiGenerator = {

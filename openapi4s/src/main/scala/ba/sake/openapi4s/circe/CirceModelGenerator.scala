@@ -109,7 +109,7 @@ class CirceModelGenerator(openApiDefinition: OpenApiDefinition) {
             openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName) match {
               case Some(referencedNamedSchema) => generateModelSources(referencedNamedSchema, Some(typeName))
               case None =>
-                println(s"Non-existing sub-schema type: '${refName}' [${namedSchemaName}}]")
+                println(s"Non-existing sub-schema type: '${refName}' [${namedSchemaName}]")
                 None
             }
           case other =>
