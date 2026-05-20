@@ -17,7 +17,7 @@ object ModelBackends {
         config = config,
         openApiDefinition = openapiDefinition,
         modelFileImports = imports.modelFileImports,
-        frameworkModelImports = imports.frameworkImports("http4s")
+        frameworkModelImports = List.empty
       ).generateSources.filter(_.file.toString.startsWith(ModelsPrefix))
     }
   }
@@ -31,7 +31,7 @@ object ModelBackends {
         config = config,
         openApiDefinition = openapiDefinition,
         modelFileImports = imports.modelFileImports,
-        frameworkModelImports = imports.frameworkImports("sharaf")
+        frameworkModelImports = List.empty
       ).generateSources.filter(_.file.toString.startsWith(ModelsPrefix))
     }
   }
