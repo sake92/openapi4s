@@ -183,7 +183,7 @@ object OpenApiGenerator {
             s"WARNING: potentially incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
               s"Framework '${frameworkBackend.id}' typically expects models flavor '${ModelFlavor.asString(frameworkBackend.requiredModelFlavor)}'."
           )
-        case _ => ()
+        case _ if frameworkBackend.requiredModelFlavor == modelFlavor => ()
       }
     }
   }
