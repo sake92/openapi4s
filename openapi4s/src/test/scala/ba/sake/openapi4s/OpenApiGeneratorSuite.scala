@@ -54,7 +54,7 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
   }
 
   test("composed generator should reject none + none") {
-    intercept[RuntimeException] {
+    interceptMessage[RuntimeException]("Invalid config: models=none and framework=none means nothing to generate.") {
       OpenApiGenerator(
         OpenApiGenerator.Config(
           url = TestUtils.getResourceUrl("petstore_3.0.0.json"),

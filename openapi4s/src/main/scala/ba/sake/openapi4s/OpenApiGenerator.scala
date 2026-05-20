@@ -10,6 +10,9 @@ trait OpenApiGenerator {
 }
 
 object OpenApiGenerator {
+  private val ModelsPrefix = "models/"
+  private val RoutesPrefix = "routes/"
+  private val ControllersPrefix = "controllers/"
 
   sealed trait ModelFlavor
   object ModelFlavor {
@@ -44,7 +47,7 @@ object OpenApiGenerator {
     override val id: String = "circe"
     override val flavor: ModelFlavor = ModelFlavor.Circe
     override def generateSources(config: Config, openapiDefinition: OpenApiDefinition): Seq[GeneratedFileSource] = {
-      new Http4sGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith("models/"))
+      new Http4sGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith(ModelsPrefix))
     }
   }
 
@@ -52,7 +55,7 @@ object OpenApiGenerator {
     override val id: String = "tupson"
     override val flavor: ModelFlavor = ModelFlavor.Tupson
     override def generateSources(config: Config, openapiDefinition: OpenApiDefinition): Seq[GeneratedFileSource] = {
-      new SharafGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith("models/"))
+      new SharafGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith(ModelsPrefix))
     }
   }
 
@@ -64,7 +67,7 @@ object OpenApiGenerator {
         openapiDefinition: OpenApiDefinition,
         modelContract: ModelContract
     ): Seq[GeneratedFileSource] = {
-      new Http4sGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith("routes/"))
+      new Http4sGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith(RoutesPrefix))
     }
   }
 
@@ -76,7 +79,7 @@ object OpenApiGenerator {
         openapiDefinition: OpenApiDefinition,
         modelContract: ModelContract
     ): Seq[GeneratedFileSource] = {
-      new SharafGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith("controllers/"))
+      new SharafGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith(ControllersPrefix))
     }
   }
 
@@ -123,13 +126,13 @@ object OpenApiGenerator {
     val modelFlavor = modelBackendOpt.map(_.flavor).getOrElse(ModelFlavor.External)
     frameworkBackendOpt.foreach { frameworkBackend =>
       if (modelFlavor != ModelFlavor.External && frameworkBackend.requiredModelFlavor != modelFlavor) {
-        println(
+        System.err.println(
           s"WARNING: potentially incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
             s"Framework '${frameworkBackend.id}' typically expects models flavor '${frameworkBackend.requiredModelFlavor.toString.toLowerCase}'."
         )
       }
       if (modelFlavor == ModelFlavor.External) {
-        println(
+        System.err.println(
           s"WARNING: models=none with framework='${frameworkBackend.id}'. " +
             s"Generation will reference ${config.basePackage}.models types that must already exist."
         )
