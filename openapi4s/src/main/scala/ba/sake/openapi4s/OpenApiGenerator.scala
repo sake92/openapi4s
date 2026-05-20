@@ -10,7 +10,6 @@ trait OpenApiGenerator {
 }
 
 object OpenApiGenerator {
-  private val ModelsPrefix = "models/"
   private val RoutesPrefix = "routes/"
   private val ControllersPrefix = "controllers/"
 
@@ -29,14 +28,16 @@ object OpenApiGenerator {
 
   case class ModelContract(
       packageName: String,
-      flavor: ModelFlavor
+      flavor: ModelFlavor,
+      imports: ModelImportContract
   )
 
   trait ModelBackend {
     def id: String
     def flavor: ModelFlavor
+    def imports: ModelImportContract
     def generateSources(config: Config, openapiDefinition: OpenApiDefinition): Seq[GeneratedFileSource]
-    def contract(config: Config): ModelContract = ModelContract(s"${config.basePackage}.models", flavor)
+    def contract(config: Config): ModelContract = ModelContract(s"${config.basePackage}.models", flavor, imports)
   }
 
   trait FrameworkBackend {
@@ -49,22 +50,6 @@ object OpenApiGenerator {
     ): Seq[GeneratedFileSource]
   }
 
-  private object CirceModelBackend extends ModelBackend {
-    override val id: String = "circe"
-    override val flavor: ModelFlavor = ModelFlavor.Circe
-    override def generateSources(config: Config, openapiDefinition: OpenApiDefinition): Seq[GeneratedFileSource] = {
-      new Http4sGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith(ModelsPrefix))
-    }
-  }
-
-  private object TupsonModelBackend extends ModelBackend {
-    override val id: String = "tupson"
-    override val flavor: ModelFlavor = ModelFlavor.Tupson
-    override def generateSources(config: Config, openapiDefinition: OpenApiDefinition): Seq[GeneratedFileSource] = {
-      new SharafGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith(ModelsPrefix))
-    }
-  }
-
   private object Http4sFrameworkBackend extends FrameworkBackend {
     override val id: String = "http4s"
     override val requiredModelFlavor: ModelFlavor = ModelFlavor.Circe
@@ -73,7 +58,12 @@ object OpenApiGenerator {
         openapiDefinition: OpenApiDefinition,
         modelContract: ModelContract
     ): Seq[GeneratedFileSource] = {
-      new Http4sGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith(RoutesPrefix))
+      new Http4sGenerator(
+        config = config,
+        openApiDefinition = openapiDefinition,
+        modelFileImports = modelContract.imports.modelFileImports,
+        frameworkModelImports = modelContract.imports.frameworkImports(id)
+      ).generateSources.filter(_.file.toString.startsWith(RoutesPrefix))
     }
   }
 
@@ -85,14 +75,16 @@ object OpenApiGenerator {
         openapiDefinition: OpenApiDefinition,
         modelContract: ModelContract
     ): Seq[GeneratedFileSource] = {
-      new SharafGenerator(config, openapiDefinition).generateSources.filter(_.file.toString.startsWith(ControllersPrefix))
+      new SharafGenerator(
+        config = config,
+        openApiDefinition = openapiDefinition,
+        modelFileImports = modelContract.imports.modelFileImports,
+        frameworkModelImports = modelContract.imports.frameworkImports(id)
+      ).generateSources.filter(_.file.toString.startsWith(ControllersPrefix))
     }
   }
 
-  private val modelBackends: Map[String, ModelBackend] = Map(
-    "circe" -> CirceModelBackend,
-    "tupson" -> TupsonModelBackend
-  )
+  private val modelBackends: Map[String, ModelBackend] = ModelBackends.byId
   private val frameworkBackends: Map[String, FrameworkBackend] = Map(
     "http4s" -> Http4sFrameworkBackend,
     "sharaf" -> SharafFrameworkBackend
@@ -156,7 +148,9 @@ object OpenApiGenerator {
         s"Started generating OpenApi for '${config.url}' with models='${config.models}', framework='${config.framework}' into '${config.baseFolder}' ..."
       )
       val modelSources = modelBackendOpt.toList.flatMap(_.generateSources(config, openapiDefinition))
-      val modelContract = modelBackendOpt.map(_.contract(config)).getOrElse(ModelContract(s"${config.basePackage}.models", ModelFlavor.External))
+      val modelContract = modelBackendOpt
+        .map(_.contract(config))
+        .getOrElse(ModelContract(s"${config.basePackage}.models", ModelFlavor.External, ModelImportContracts.external))
       val frameworkSources =
         frameworkBackendOpt.toList.flatMap(_.generateSources(config, openapiDefinition, modelContract))
       val packagePath = config.basePackage.replaceAll("\\.", "/")

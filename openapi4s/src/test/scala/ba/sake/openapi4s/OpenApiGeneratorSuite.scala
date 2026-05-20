@@ -20,6 +20,8 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     assert(generatedFiles.exists(_.startsWith("models/")))
     assert(generatedFiles.exists(_.startsWith("routes/")))
     assert(!generatedFiles.exists(_.startsWith("controllers/")))
+    val routesFile = readGeneratedFile(baseFolder.resolve("pkg"), "routes/")
+    assert(routesFile.contains("import org.http4s.circe.CirceEntityCodec.*"))
   }
 
   test("composed generator should support tupson + none") {
@@ -54,6 +56,8 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     assert(!generatedFiles.exists(_.startsWith("models/")))
     assert(generatedFiles.exists(_.startsWith("routes/")))
     assert(!generatedFiles.exists(_.startsWith("controllers/")))
+    val routesFile = readGeneratedFile(baseFolder.resolve("pkg"), "routes/")
+    assert(!routesFile.contains("import org.http4s.circe.CirceEntityCodec.*"))
   }
 
   test("composed generator should reject none + none") {
@@ -112,5 +116,11 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
           .toList
       } finally stream.close()
     }
+  }
+
+  private def readGeneratedFile(base: Path, prefix: String): String = {
+    val generatedFiles = listScalaFiles(base)
+    val relative = generatedFiles.find(_.startsWith(prefix)).getOrElse(fail(s"Expected generated file with prefix '$prefix'"))
+    Files.readString(base.resolve(relative))
   }
 }

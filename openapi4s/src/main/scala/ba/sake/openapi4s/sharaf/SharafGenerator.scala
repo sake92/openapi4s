@@ -8,7 +8,12 @@ import org.apache.commons.text.CaseUtils
 import ba.sake.regenesca._
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 
-class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenApiDefinition) extends OpenApiGenerator {
+class SharafGenerator(
+    config: OpenApiGenerator.Config,
+    openApiDefinition: OpenApiDefinition,
+    modelFileImports: List[Import] = ModelImportContracts.tupson.modelFileImports,
+    frameworkModelImports: List[Import] = ModelImportContracts.tupson.frameworkImports("sharaf")
+) extends OpenApiGenerator {
 
   private val merger = SourceMerger(mergeDefBodies = true)
   private val regenescaGenerator = RegenescaGenerator(merger)
@@ -28,17 +33,10 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
 
   private[openapi4s] def generateSources: Seq[GeneratedFileSource] = {
     val modelsPkg = generatePkgSelect(s"${config.basePackage}.models")
-    val modelImports = List[Import](
-      q"import java.time.*",
-      q"import java.util.UUID",
-      q"import org.typelevel.jawn.ast.JValue",
-      q"import ba.sake.tupson.*",
-      q"import ba.sake.validson.Validator"
-    )
     val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
       val namedSchemaName = namedSchemaDef.name.capitalize
       val modelSources = generateModelSources(namedSchemaDef, None)
-      val allStmts = modelImports ++ modelSources
+      val allStmts = modelFileImports ++ modelSources
       Option.when(modelSources.nonEmpty) {
         GeneratedFileSource(
           Paths.get(s"models/${namedSchemaName}.scala"),
@@ -186,11 +184,11 @@ class SharafGenerator(config: OpenApiGenerator.Config, openApiDefinition: OpenAp
       q"import sttp.model.StatusCode",
       q"import ba.sake.querson.QueryStringRW",
       q"import ba.sake.validson.Validator",
-      q"import ba.sake.sharaf.*, routing.*", {
+      q"import ba.sake.sharaf.*, routing.*"
+    ) ++ frameworkModelImports ++ List[Import]({
         val importer = s"${config.basePackage}.models.*".parse[Importer].get
         q"import ..${List(importer)}"
-      }
-    )
+      })
     List(
       GeneratedFileSource(
         Paths.get(s"controllers/${controllerName}.scala"),
