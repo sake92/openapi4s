@@ -4,6 +4,7 @@ package http4s
 import java.nio.file.Paths
 import scala.meta._
 import scala.meta.dialects.Scala34
+import org.apache.commons.text.CaseUtils
 import ba.sake.regenesca._
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 import ba.sake.openapi4s.circe.CirceModelGenerator

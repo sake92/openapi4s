@@ -1,6 +1,7 @@
 package ba.sake.openapi4s
 
 import scala.meta._
+import scala.meta.dialects.Scala34
 import org.apache.commons.text.CaseUtils
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 

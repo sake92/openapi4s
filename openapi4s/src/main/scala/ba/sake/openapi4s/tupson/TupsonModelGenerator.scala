@@ -2,6 +2,7 @@ package ba.sake.openapi4s
 package tupson
 
 import scala.meta._
+import scala.meta.dialects.Scala34
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 
 class TupsonModelGenerator(openApiDefinition: OpenApiDefinition) {
