@@ -1,6 +1,6 @@
 package ba.sake.openapi4s.cli
 
-import ba.sake.openapi4s.OpenApiGenerator
+import ba.sake.openapi4s.OpenApiWriter
 
 import java.nio.file.Paths
 import mainargs.{main, arg, ParserForMethods}
@@ -9,8 +9,10 @@ object OpenApi4sMain {
 
   @main
   def run(
-      @arg(doc = "Generator name: 'sharaf' or 'http4s'. Default is 'sharaf'")
-      generator: String = "sharaf",
+      @arg(doc = "Model backend: 'circe', 'tupson' or 'none'. If unset, defaults to 'tupson'.")
+      models: String = "tupson",
+      @arg(doc = "Framework backend: 'http4s', 'sharaf' or 'none'. If unset, defaults to 'sharaf'.")
+      framework: String = "sharaf",
       @arg(doc = "OpenAPI URL or file path. Default is 'openapi.json'")
       url: String = "openapi.json",
       @arg(doc = "Base folder for generated sources. Default is 'src/main/scala'")
@@ -18,15 +20,16 @@ object OpenApi4sMain {
       @arg(doc = "Base package for generated sources")
       basePackage: String
   ) = {
-    val openApiGenerator = OpenApiGenerator(
-      name = generator,
-      config = OpenApiGenerator.Config(
+    val writer = OpenApiWriter(
+      config = OpenApiWriter.Config(
         url = url,
         baseFolder = Paths.get(baseFolder),
-        basePackage = basePackage
+        basePackage = basePackage,
+        models = models,
+        framework = framework
       )
     )
-    openApiGenerator.generate()
+    writer.write()
   }
   def main(args: Array[String]): Unit = ParserForMethods(this).runOrExit(args)
 }

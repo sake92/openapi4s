@@ -4,9 +4,11 @@ case class NamedSchemaDefinitions(
     defs: Seq[SchemaDefinition.Named]
 )
 
-trait NameableSchemaDefinition extends SchemaDefinition // marker trait
 
 sealed abstract class SchemaDefinition
+
+trait NameableSchemaDefinition extends SchemaDefinition // marker trait
+
 object SchemaDefinition {
   case class Str(default: Option[String], minLength: Option[Int], maxLength: Option[Int], pattern: Option[String])
       extends SchemaDefinition
