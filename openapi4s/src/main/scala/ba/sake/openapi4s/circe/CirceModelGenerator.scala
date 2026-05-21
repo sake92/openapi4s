@@ -1,16 +1,44 @@
 package ba.sake.openapi4s
 package circe
 
+import java.nio.file.Paths
 import scala.meta._
 import scala.meta.dialects.Scala34
+import ba.sake.regenesca._
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 
-class CirceModelGenerator(openApiDefinition: OpenApiDefinition) {
+class CirceModelGenerator(config: OpenApiWriter.Config, openApiDefinition: OpenApiDefinition)
+    extends OpenApiGenerator {
 
   // keep track of done schemas (to avoid generating a subtype multiple times)
   private var generatedNamedSchemas = Set.empty[String]
 
-  def generateModelSources(namedSchemaDef: SchemaDefinition.Named, superType: Option[Type]): List[Stat] = {
+  override def generate(): Seq[GeneratedFileSource] = {
+    val modelsPkg = generatePkgSelect(s"${config.basePackage}.models")
+    val modelImports = List[Import](
+      q"import java.time.*",
+      q"import java.util.UUID",
+      q"import io.circe.{Codec, Json}",
+      q"import io.circe.derivation.{Configuration, ConfiguredCodec, ConfiguredEnumCodec}"
+    )
+    val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
+      val namedSchemaName = namedSchemaDef.name.capitalize
+      val modelSources = generateModelSources(namedSchemaDef, None)
+      val allStmts = modelImports ++ modelSources
+      Option.when(modelSources.nonEmpty) {
+        GeneratedFileSource(
+          Paths.get(s"models/${namedSchemaName}.scala"),
+          source"""
+            // generated with OpenApi4s
+            package ${modelsPkg} { ..${allStmts} }
+          """
+        )
+      }
+    }
+    modelFileSources
+  }
+
+  private def generateModelSources(namedSchemaDef: SchemaDefinition.Named, superType: Option[Type]): List[Stat] = {
     val namedSchemaName = namedSchemaDef.name.capitalize
     if (generatedNamedSchemas(namedSchemaName)) return List.empty
     val typeName = Type.Name(namedSchemaName)
@@ -121,8 +149,8 @@ class CirceModelGenerator(openApiDefinition: OpenApiDefinition) {
           q"""
             object ${termName} {
               given Configuration =  Configuration.default.withDiscriminator(${Lit.String(
-            oneOfSchema.discriminatorPropertyName
-          )})
+              oneOfSchema.discriminatorPropertyName
+            )})
               given Codec[${typeName}] = ConfiguredCodec.derived
               ..${oneOfCases}
             }
@@ -131,5 +159,13 @@ class CirceModelGenerator(openApiDefinition: OpenApiDefinition) {
     }
     generatedNamedSchemas += namedSchemaName
     generatedModelSources
+  }
+
+  private def generatePkgSelect(pkg: String) = {
+    val packageComponents = pkg.split("\\.").toList
+    val firstSelect = q"${Term.Name(packageComponents(0))}.${Term.Name(packageComponents(1))}"
+    packageComponents.tail.tail.foldLeft(firstSelect) { (a, b) =>
+      q"${a}.${Term.Name(b)}"
+    }
   }
 }

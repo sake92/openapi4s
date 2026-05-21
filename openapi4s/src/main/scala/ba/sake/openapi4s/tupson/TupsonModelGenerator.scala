@@ -1,14 +1,44 @@
 package ba.sake.openapi4s
 package tupson
 
+import java.nio.file.Paths
 import scala.meta._
 import scala.meta.dialects.Scala34
+import ba.sake.regenesca._
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
+import ba.sake.openapi4s.validson.ValidsonUtils
 
-class TupsonModelGenerator(openApiDefinition: OpenApiDefinition) {
+class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: OpenApiDefinition)
+    extends OpenApiGenerator {
 
   // keep track of done schemas (to avoid generating a subtype multiple times)
   private var generatedNamedSchemas = Set.empty[String]
+
+  override def generate(): Seq[GeneratedFileSource] = {
+    val modelsPkg = generatePkgSelect(s"${config.basePackage}.models")
+    val modelImports = List[Import](
+      q"import java.time.*",
+      q"import java.util.UUID",
+      q"import org.typelevel.jawn.ast.JValue",
+      q"import ba.sake.tupson.*",
+      q"import ba.sake.validson.Validator"
+    )
+    val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
+      val namedSchemaName = namedSchemaDef.name.capitalize
+      val modelSources = generateModelSources(namedSchemaDef, None)
+      val allStmts = modelImports ++ modelSources
+      Option.when(modelSources.nonEmpty) {
+        GeneratedFileSource(
+          Paths.get(s"models/${namedSchemaName}.scala"),
+          source"""
+            // generated with OpenApi4s
+            package ${modelsPkg} { ..${allStmts} }
+          """
+        )
+      }
+    }
+    modelFileSources
+  }
 
   def generateModelSources(namedSchemaDef: SchemaDefinition.Named, superType: Option[Type]): List[Stat] = {
     val namedSchemaName = namedSchemaDef.name.capitalize
@@ -57,7 +87,7 @@ class TupsonModelGenerator(openApiDefinition: OpenApiDefinition) {
           }
         }
         // validation
-        val validatorStmts = SchemaUtils.generateValidsonStms(typeName, obj.properties.map(p => (p.name, p.schema)))
+        val validatorStmts = ValidsonUtils.generateStms(typeName, obj.properties.map(p => (p.name, p.schema)))
         val classDefinition = superType match {
           case Some(st) =>
             val extendsInit = init"${st}()"
@@ -117,9 +147,20 @@ class TupsonModelGenerator(openApiDefinition: OpenApiDefinition) {
             List.empty
         }
 
-        generateModelSources(SchemaDefinition.Named(namedSchemaName, SchemaDefinition.Obj(mergedSchemasProps)), superType)
+        generateModelSources(
+          SchemaDefinition.Named(namedSchemaName, SchemaDefinition.Obj(mergedSchemasProps)),
+          superType
+        )
     }
     generatedNamedSchemas += namedSchemaName
     generatedModelSources
+  }
+
+  private def generatePkgSelect(pkg: String) = {
+    val packageComponents = pkg.split("\\.").toList
+    val firstSelect = q"${Term.Name(packageComponents(0))}.${Term.Name(packageComponents(1))}"
+    packageComponents.tail.tail.foldLeft(firstSelect) { (a, b) =>
+      q"${a}.${Term.Name(b)}"
+    }
   }
 }

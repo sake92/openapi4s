@@ -8,49 +8,15 @@ import org.apache.commons.text.CaseUtils
 import ba.sake.regenesca._
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 import ba.sake.openapi4s.tupson.TupsonModelGenerator
+import ba.sake.openapi4s.validson.ValidsonUtils
 
 class SharafGenerator(
-    config: OpenApiGenerator.Config,
+    config: OpenApiWriter.Config,
     openApiDefinition: OpenApiDefinition,
-    modelFileImports: List[Import] = ModelImportContracts.tupson.modelFileImports,
-    frameworkModelImports: List[Import] = ModelImportContracts.tupson.frameworkImports("sharaf")
+    frameworkModelImports: List[Import]
 ) extends OpenApiGenerator {
 
-  private val merger = SourceMerger(mergeDefBodies = true)
-  private val regenescaGenerator = RegenescaGenerator(merger)
-
-  override def generate(): Unit = {
-    println(s"Started generating Sharaf server for '${config.url}' OpenApi into '${config.baseFolder}' ...")
-    val packagePath = config.basePackage.replaceAll("\\.", "/")
-    val adaptedGenSourceFiles = generateSources.map { gsf =>
-      gsf.copy(file = config.baseFolder.resolve(packagePath).resolve(gsf.file.toString))
-    }
-    regenescaGenerator.generate(adaptedGenSourceFiles)
-    println(s"Finished generating Sharaf server for '${config.url}' OpenApi.")
-  }
-
-  private[openapi4s] def generateSources: Seq[GeneratedFileSource] = {
-    val modelsPkg = generatePkgSelect(s"${config.basePackage}.models")
-    val modelGenerator = new TupsonModelGenerator(openApiDefinition)
-    val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
-      val namedSchemaName = namedSchemaDef.name.capitalize
-      val modelSources = modelGenerator.generateModelSources(namedSchemaDef, None)
-      val allStmts = modelFileImports ++ modelSources
-      Option.when(modelSources.nonEmpty) {
-        GeneratedFileSource(
-          Paths.get(s"models/${namedSchemaName}.scala"),
-          source"""
-            // generated with OpenApi4s
-            package ${modelsPkg} { ..${allStmts} }
-          """
-        )
-      }
-    }
-    val controllerFileSources = generateControllersSources
-    modelFileSources ++ controllerFileSources
-  }
-
-  private def generateControllersSources: List[GeneratedFileSource] = {
+  override def generate(): Seq[GeneratedFileSource] = {
     val groupedByTag = openApiDefinition.pathDefinitions.defs.groupBy(_.getTag)
     groupedByTag.flatMap { case (tag, pathDefinitions) =>
       generateControllerSources(tag, pathDefinitions)
@@ -121,7 +87,7 @@ class SharafGenerator(
           // validation
           // TODO figure out how to validate Option-al nicely
           val validatedQPs = pathDef.queryParams.filter(_.required).map(qp => (qp.name, qp.schema))
-          val validatorStmts = SchemaUtils.generateValidsonStms(t"QP", validatedQPs)
+          val validatorStmts = ValidsonUtils.generateStms(t"QP", validatedQPs)
           adhocEnums.flatten ++
             List(q"case class QP(..${qpParams}) derives QueryStringRW") ++
             Option.when(validatorStmts.nonEmpty)(q""" object QP { ..${validatorStmts} } """).toList ++

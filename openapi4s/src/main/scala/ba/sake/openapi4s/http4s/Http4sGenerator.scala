@@ -10,44 +10,12 @@ import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 import ba.sake.openapi4s.circe.CirceModelGenerator
 
 class Http4sGenerator(
-    config: OpenApiGenerator.Config,
+    config: OpenApiWriter.Config,
     openApiDefinition: OpenApiDefinition,
-    modelFileImports: List[Import] = ModelImportContracts.circe.modelFileImports,
-    frameworkModelImports: List[Import] = ModelImportContracts.circe.frameworkImports("http4s")
+    frameworkModelImports: List[Import]
 ) extends OpenApiGenerator {
 
-  private val merger = SourceMerger(mergeDefBodies = true)
-  private val regenescaGenerator = RegenescaGenerator(merger)
-
-  override def generate(): Unit = {
-    println(s"Started generating Http4s server for '${config.url}' OpenApi into '${config.baseFolder}' ...")
-    val packagePath = config.basePackage.replaceAll("\\.", "/")
-    val adaptedGenSourceFiles = generateSources.map { gsf =>
-      gsf.copy(file = config.baseFolder.resolve(packagePath).resolve(gsf.file.toString))
-    }
-    regenescaGenerator.generate(adaptedGenSourceFiles)
-    println(s"Finished generating Http4s server for '${config.url}' OpenApi.")
-  }
-
-  private[openapi4s] def generateSources: Seq[GeneratedFileSource] = {
-    val modelsPkg = generatePkgSelect(s"${config.basePackage}.models")
-    val modelGenerator = new CirceModelGenerator(openApiDefinition)
-    val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
-      val namedSchemaName = namedSchemaDef.name.capitalize
-      val modelSources = modelGenerator.generateModelSources(namedSchemaDef, None)
-      val allStmts = modelFileImports ++ modelSources
-      Option.when(modelSources.nonEmpty) {
-        GeneratedFileSource(
-          Paths.get(s"models/${namedSchemaName}.scala"),
-          source""" package ${modelsPkg} { ..${allStmts} } """
-        )
-      }
-    }
-    val routeFileSources = generateRoutesSources
-    modelFileSources ++ routeFileSources
-  }
-
-  private def generateRoutesSources: List[GeneratedFileSource] = {
+  override def generate(): Seq[GeneratedFileSource] = {
     val groupedByTag = openApiDefinition.pathDefinitions.defs.groupBy(_.getTag)
     groupedByTag.flatMap { case (tag, pathDefinitions) =>
       generateRouteSources(tag, pathDefinitions)

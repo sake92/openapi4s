@@ -1,6 +1,6 @@
 package ba.sake.openapi4s.cli
 
-import ba.sake.openapi4s.OpenApiGenerator
+import ba.sake.openapi4s.OpenApiWriter
 
 import java.nio.file.Paths
 import mainargs.{main, arg, ParserForMethods}
@@ -9,12 +9,10 @@ object OpenApi4sMain {
 
   @main
   def run(
-      @arg(doc = "Model backend: 'circe', 'tupson' or 'none'. If unset, defaults to 'tupson' (or mapped by --generator).")
-      models: String = "",
-      @arg(doc = "Framework backend: 'http4s', 'sharaf' or 'none'. If unset, defaults to 'sharaf' (or mapped by --generator).")
-      framework: String = "",
-      @arg(doc = "Deprecated legacy generator mapping: 'sharaf' => models=tupson+framework=sharaf, 'http4s' => models=circe+framework=http4s")
-      generator: String = "",
+      @arg(doc = "Model backend: 'circe', 'tupson' or 'none'. If unset, defaults to 'tupson'.")
+      models: String = "tupson",
+      @arg(doc = "Framework backend: 'http4s', 'sharaf' or 'none'. If unset, defaults to 'sharaf'.")
+      framework: String = "sharaf",
       @arg(doc = "OpenAPI URL or file path. Default is 'openapi.json'")
       url: String = "openapi.json",
       @arg(doc = "Base folder for generated sources. Default is 'src/main/scala'")
@@ -22,28 +20,16 @@ object OpenApi4sMain {
       @arg(doc = "Base package for generated sources")
       basePackage: String
   ) = {
-    val defaultMapped = ("tupson", "sharaf")
-    val (mappedModels, mappedFramework) = generator.toLowerCase match {
-      case "" | "sharaf" => defaultMapped
-      case "http4s" => ("circe", "http4s")
-      case other =>
-        throw new RuntimeException(s"Unknown generator '${other}'. Available generators: 'http4s', 'sharaf'")
-    }
-    val finalModels = if (models.nonEmpty) models else mappedModels
-    val finalFramework = if (framework.nonEmpty) framework else mappedFramework
-    if (generator.nonEmpty) {
-      System.err.println("WARNING: '--generator' is deprecated since 0.7.0. Prefer '--models' and '--framework'.")
-    }
-    val openApiGenerator = OpenApiGenerator(
-      config = OpenApiGenerator.Config(
+    val writer = OpenApiWriter(
+      config = OpenApiWriter.Config(
         url = url,
         baseFolder = Paths.get(baseFolder),
         basePackage = basePackage,
-        models = finalModels,
-        framework = finalFramework
+        models = models,
+        framework = framework
       )
     )
-    openApiGenerator.generate()
+    writer.write()
   }
   def main(args: Array[String]): Unit = ParserForMethods(this).runOrExit(args)
 }

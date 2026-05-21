@@ -4,41 +4,27 @@ import scala.meta._
 import scala.meta.dialects.Scala34
 
 case class ModelImportContract(
-    modelFileImports: List[Import],
-    frameworkImportsById: Map[String, List[Import]] = Map.empty
+    frameworkImportsById: Map[FrameworkBackendId, List[Import]] = Map.empty
 ) {
-  def frameworkImports(frameworkId: String): List[Import] =
+  def frameworkImports(frameworkId: FrameworkBackendId): List[Import] =
     frameworkImportsById.getOrElse(frameworkId, List.empty)
 }
 
 object ModelImportContracts {
+  val none = ModelImportContract(
+    frameworkImportsById = Map.empty.withDefault(_ => List.empty)
+  )
+
   val circe: ModelImportContract = ModelImportContract(
-    modelFileImports = List(
-      q"import java.time.*",
-      q"import java.util.UUID",
-      q"import io.circe.{Codec, Json}",
-      q"import io.circe.derivation.{Configuration, ConfiguredCodec, ConfiguredEnumCodec}"
-    ),
     frameworkImportsById = Map(
-      "http4s" -> List(q"import org.http4s.circe.CirceEntityCodec.*")
+      FrameworkBackendId.Http4s -> List(q"import org.http4s.circe.CirceEntityCodec.*")
     )
   )
 
   val tupson: ModelImportContract = ModelImportContract(
-    modelFileImports = List(
-      q"import java.time.*",
-      q"import java.util.UUID",
-      q"import org.typelevel.jawn.ast.JValue",
-      q"import ba.sake.tupson.*",
-      q"import ba.sake.validson.Validator"
-    ),
     frameworkImportsById = Map(
-      "sharaf" -> List.empty
+      FrameworkBackendId.Sharaf -> List.empty
     )
   )
 
-  val external: ModelImportContract = ModelImportContract(
-    modelFileImports = List.empty,
-    frameworkImportsById = Map.empty
-  )
 }

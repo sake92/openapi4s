@@ -7,33 +7,34 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
 
   test("composed generator should support circe + http4s") {
     val baseFolder = Files.createTempDirectory("openapi4s-circe-http4s")
-    val config = OpenApiGenerator.Config(
+    val config = OpenApiWriter.Config(
       url = TestUtils.getResourceUrl("petstore_3.0.0.json"),
       baseFolder = baseFolder,
       basePackage = "pkg",
       models = "circe",
       framework = "http4s"
     )
-    OpenApiGenerator(config).generate()
+    OpenApiWriter(config).write()
     val generatedFiles = listScalaFiles(baseFolder.resolve("pkg"))
     assert(generatedFiles.nonEmpty)
     assert(generatedFiles.exists(_.startsWith("models/")))
     assert(generatedFiles.exists(_.startsWith("routes/")))
     assert(!generatedFiles.exists(_.startsWith("controllers/")))
     val routesFile = readGeneratedFile(baseFolder.resolve("pkg"), "routes/")
+    println(routesFile)
     assert(routesFile.contains("import org.http4s.circe.CirceEntityCodec.*"))
   }
 
   test("composed generator should support tupson + none") {
     val baseFolder = Files.createTempDirectory("openapi4s-tupson-none")
-    val config = OpenApiGenerator.Config(
+    val config = OpenApiWriter.Config(
       url = TestUtils.getResourceUrl("petstore_3.0.0.json"),
       baseFolder = baseFolder,
       basePackage = "pkg",
       models = "tupson",
       framework = "none"
     )
-    OpenApiGenerator(config).generate()
+    OpenApiWriter(config).write()
     val generatedFiles = listScalaFiles(baseFolder.resolve("pkg"))
     assert(generatedFiles.nonEmpty)
     assert(generatedFiles.exists(_.startsWith("models/")))
@@ -43,14 +44,14 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
 
   test("composed generator should support none + http4s") {
     val baseFolder = Files.createTempDirectory("openapi4s-none-http4s")
-    val config = OpenApiGenerator.Config(
+    val config = OpenApiWriter.Config(
       url = TestUtils.getResourceUrl("petstore_3.0.0.json"),
       baseFolder = baseFolder,
       basePackage = "pkg",
       models = "none",
       framework = "http4s"
     )
-    OpenApiGenerator(config).generate()
+    OpenApiWriter(config).write()
     val generatedFiles = listScalaFiles(baseFolder.resolve("pkg"))
     assert(generatedFiles.nonEmpty)
     assert(!generatedFiles.exists(_.startsWith("models/")))
@@ -62,8 +63,8 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
 
   test("composed generator should reject none + none") {
     interceptMessage[RuntimeException]("Invalid config: models=none and framework=none means nothing to generate.") {
-      OpenApiGenerator(
-        OpenApiGenerator.Config(
+      OpenApiWriter(
+        OpenApiWriter.Config(
           url = TestUtils.getResourceUrl("petstore_3.0.0.json"),
           baseFolder = Paths.get("app"),
           basePackage = "pkg",
@@ -76,32 +77,18 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
 
   test("composed generator should allow circe + sharaf") {
     val baseFolder = Files.createTempDirectory("openapi4s-circe-sharaf")
-    val config = OpenApiGenerator.Config(
+    val config = OpenApiWriter.Config(
       url = TestUtils.getResourceUrl("petstore_3.0.0.json"),
       baseFolder = baseFolder,
       basePackage = "pkg",
       models = "circe",
       framework = "sharaf"
     )
-    OpenApiGenerator(config).generate()
+    OpenApiWriter(config).write()
     val generatedFiles = listScalaFiles(baseFolder.resolve("pkg"))
     assert(generatedFiles.nonEmpty)
     assert(generatedFiles.exists(_.startsWith("models/")))
     assert(generatedFiles.exists(_.startsWith("controllers/")))
-  }
-
-  test("legacy generator mapping should still work") {
-    val baseFolder = Files.createTempDirectory("openapi4s-legacy-http4s")
-    val config = OpenApiGenerator.Config(
-      url = TestUtils.getResourceUrl("petstore_3.0.0.json"),
-      baseFolder = baseFolder,
-      basePackage = "pkg"
-    )
-    OpenApiGenerator("http4s", config).generate()
-    val generatedFiles = listScalaFiles(baseFolder.resolve("pkg"))
-    assert(generatedFiles.nonEmpty)
-    assert(generatedFiles.exists(_.startsWith("models/")))
-    assert(generatedFiles.exists(_.startsWith("routes/")))
   }
 
   private def listScalaFiles(base: Path): List[String] = {
@@ -109,7 +96,9 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     else {
       val stream = Files.walk(base)
       try {
-        stream.iterator().asScala
+        stream
+          .iterator()
+          .asScala
           .filter(path => Files.isRegularFile(path) && path.getFileName.toString.endsWith(".scala"))
           .map(path => base.relativize(path).toString.replace('\\', '/'))
           .toList
@@ -119,7 +108,8 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
 
   private def readGeneratedFile(base: Path, prefix: String): String = {
     val generatedFiles = listScalaFiles(base)
-    val relative = generatedFiles.find(_.startsWith(prefix)).getOrElse(fail(s"Expected generated file with prefix '$prefix'"))
+    val relative =
+      generatedFiles.find(_.startsWith(prefix)).getOrElse(fail(s"Expected generated file with prefix '$prefix'"))
     Files.readString(base.resolve(relative))
   }
 }
