@@ -7,7 +7,7 @@ Here is a small video demo: https://youtu.be/kf0vGrlKNb8
 ## Features and Benefits
 - incremental generator
   - doesn't touch the code that you added manually
-  - only adds new properties/methods/classes
+  - **additive only**, adds new properties/methods/classes
 - lenient parser+generator
   - if something is not supported it will still (mostly) work
   - you can adapt your openapi spec to work gradually
@@ -20,19 +20,24 @@ Here is a small video demo: https://youtu.be/kf0vGrlKNb8
 
 ## Generators
 
-### Sharaf backend
+
+### Circe models backend
+- discriminated models (sealed traits / enums)
+- enums (singleton enums)
+
+### Tupson models backend
+- discriminated models (sealed traits / enums)
+- enums (singleton enums)
+
+### Sharaf framework backend
 Supports almost all features:
 - controllers
-- discriminated models (sealed traits)
-- enums (scala3 singleton enums)
 - validations
 - query params
 
-### Http4s backend
+### Http4s framework backend
 Supports some features:
 - routes (controllers)
-- discriminated models (sealed traits)
-- enums (scala3 singleton enums)
 
 TODO: query params, validation..  
 Contributions welcome!
@@ -73,7 +78,3 @@ You can now combine model and framework generation independently:
 # framework only (expects existing com.example.models)
 --models none --framework http4s
 ```
-
-`--generator` is still supported as a deprecated compatibility alias:
-- `--generator sharaf` => `--models tupson --framework sharaf`
-- `--generator http4s` => `--models circe --framework http4s`
