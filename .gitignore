@@ -15,3 +15,5 @@ out/
 .scala-build/
 
 .deder/
+
+.worktrees/
