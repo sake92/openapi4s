@@ -8,7 +8,8 @@ import scala.meta.dialects.Scala34
 class OpenApiWriter(
     config: OpenApiWriter.Config,
     modelBackend: ModelBackend,
-    frameworkBackend: FrameworkBackend
+    frameworkBackend: FrameworkBackend,
+    validationBackend: ValidationBackend
 ) {
   private val openapiDefinition = OpenApiDefinition.parse(config.url)
   private val merger = SourceMerger(mergeDefBodies = true)
@@ -16,13 +17,14 @@ class OpenApiWriter(
 
   def write(): Seq[GeneratedFileSource] = {
     println(
-      s"Started generating OpenApi for '${config.url}' with models='${config.models}', framework='${config.framework}' into '${config.baseFolder}' ..."
+      s"Started generating OpenApi for '${config.url}' with models='${config.models}', framework='${config.framework}', validation='${config.validation}' ..."
     )
-    val modelSources = modelBackend.generator(config, openapiDefinition).generate()
+    val (validationSources, validationTypeMap) = validationBackend.generate(config, openapiDefinition)
+    val modelSources = modelBackend.generator(config, openapiDefinition, validationTypeMap).generate()
     val modelContract = modelBackend.contract(config)
     val frameworkSources = frameworkBackend.generator(config, openapiDefinition, modelContract).generate()
     val packagePath = config.basePackage.replaceAll("\\.", "/")
-    val adaptedGenSourceFiles = (modelSources ++ frameworkSources).map { gsf =>
+    val adaptedGenSourceFiles = (validationSources ++ modelSources ++ frameworkSources).map { gsf =>
       gsf.copy(file = config.baseFolder.resolve(packagePath).resolve(gsf.file.toString))
     }
     regenescaGenerator.generate(adaptedGenSourceFiles)
@@ -57,7 +59,17 @@ object OpenApiWriter {
       )
     }
 
-    new OpenApiWriter(config, modelBackend, frameworkBackend)
+    val validationId = ValidationBackendId.fromString(config.validation)
+    val validationBackend = ValidationBackend.byId(validationId)
+
+    if (!validationBackend.supportedModelIds.contains(modelId)) {
+      throw new RuntimeException(
+        s"Incompatible config: --models ${config.models} does not support --validation ${config.validation}. " +
+          s"Validation '${validationId}' is only compatible with model backends: ${validationBackend.supportedModelIds.mkString(", ")}"
+      )
+    }
+
+    new OpenApiWriter(config, modelBackend, frameworkBackend, validationBackend)
   }
 
   case class Config(
@@ -65,7 +77,8 @@ object OpenApiWriter {
       baseFolder: Path,
       basePackage: String,
       models: String,
-      framework: String
+      framework: String,
+      validation: String = "none"
   )
 
 }
