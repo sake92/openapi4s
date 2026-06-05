@@ -65,7 +65,8 @@ object OpenApiWriter {
       baseFolder: Path,
       basePackage: String,
       models: String,
-      framework: String
+      framework: String,
+      validation: String
   )
 
 }

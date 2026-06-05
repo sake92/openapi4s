@@ -91,6 +91,37 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     assert(generatedFiles.exists(_.startsWith("controllers/")))
   }
 
+  test("composed generator should support circe + iron validation") {
+    val baseFolder = Files.createTempDirectory("openapi4s-circe-iron")
+    val config = OpenApiWriter.Config(
+      url = TestUtils.getResourceUrl("petstore_3.0.0.json"),
+      baseFolder = baseFolder,
+      basePackage = "pkg",
+      models = "circe",
+      framework = "none",
+      validation = "iron"
+    )
+    OpenApiWriter(config).write()
+    val generatedFiles = listScalaFiles(baseFolder.resolve("pkg"))
+    assert(generatedFiles.nonEmpty)
+    assert(generatedFiles.exists(_.startsWith("models/Newtypes.scala")),
+      s"Expected models/Newtypes.scala in: ${generatedFiles.mkString(", ")}")
+    assert(generatedFiles.exists(_.startsWith("models/") && !_.contains("Newtypes")),
+      "Expected at least one model file besides Newtypes.scala")
+
+    val newtypesFile = readGeneratedFile(baseFolder.resolve("pkg"), "models/Newtypes.scala")
+    assert(newtypesFile.contains("import io.github.iltotore.iron.*"),
+      "Newtypes.scala should import io.github.iltotore.iron.*")
+    assert(newtypesFile.contains("import io.github.iltotore.iron.constraint.all.*"),
+      "Newtypes.scala should import iron constraints")
+    assert(newtypesFile.contains("extends io.github.iltotore.iron.RefinedType"),
+      "Newtypes.scala should contain RefinedType definitions")
+
+    val petFile = readGeneratedFile(baseFolder.resolve("pkg"), "models/Pet.scala")
+    assert(petFile.contains("import io.github.iltotore.iron.circe.given"),
+      "Pet.scala should import iron circe given")
+  }
+
   private def listScalaFiles(base: Path): List[String] = {
     if (!Files.exists(base)) List.empty
     else {
