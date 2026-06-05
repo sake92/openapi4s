@@ -35,9 +35,11 @@ object ValidationBackend {
 
   val none: ValidationBackend = validation.NoneValidationBackend
   val iron: ValidationBackend = validation.IronValidationBackend
+  val validson: ValidationBackend = validation.ValidsonValidationBackend
 
   val byId: Map[ValidationBackendId, ValidationBackend] = Map(
     ValidationBackendId.None -> none,
-    ValidationBackendId.Iron -> iron
+    ValidationBackendId.Iron -> iron,
+    ValidationBackendId.Validson -> validson
   )
 }
