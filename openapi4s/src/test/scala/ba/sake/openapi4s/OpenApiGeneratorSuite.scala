@@ -21,8 +21,8 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     assert(generatedFiles.exists(_.startsWith("routes/")))
     assert(!generatedFiles.exists(_.startsWith("controllers/")))
     val routesFile = readGeneratedFile(baseFolder.resolve("pkg"), "routes/")
-    println(routesFile)
     assert(routesFile.contains("import org.http4s.circe.CirceEntityCodec.*"))
+    printGeneratedSources(baseFolder.resolve("pkg"))
   }
 
   test("composed generator should support tupson + none") {
@@ -40,6 +40,7 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     assert(generatedFiles.exists(_.startsWith("models/")))
     assert(!generatedFiles.exists(_.startsWith("routes/")))
     assert(!generatedFiles.exists(_.startsWith("controllers/")))
+    printGeneratedSources(baseFolder.resolve("pkg"))
   }
 
   test("composed generator should support none + http4s") {
@@ -59,6 +60,7 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     assert(!generatedFiles.exists(_.startsWith("controllers/")))
     val routesFile = readGeneratedFile(baseFolder.resolve("pkg"), "routes/")
     assert(!routesFile.contains("import org.http4s.circe.CirceEntityCodec.*"))
+    printGeneratedSources(baseFolder.resolve("pkg"))
   }
 
   test("composed generator should reject none + none") {
@@ -89,6 +91,7 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     assert(generatedFiles.nonEmpty)
     assert(generatedFiles.exists(_.startsWith("models/")))
     assert(generatedFiles.exists(_.startsWith("controllers/")))
+    printGeneratedSources(baseFolder.resolve("pkg"))
   }
 
   test("composed generator should support circe + iron validation") {
@@ -120,6 +123,7 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     val petFile = readGeneratedFile(baseFolder.resolve("pkg"), "models/Pet.scala")
     assert(petFile.contains("import io.github.iltotore.iron.circe.given"),
       "Pet.scala should import iron circe given")
+    printGeneratedSources(baseFolder.resolve("pkg"))
   }
 
   private def listScalaFiles(base: Path): List[String] = {
@@ -142,5 +146,16 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     val relative =
       generatedFiles.find(_.startsWith(prefix)).getOrElse(fail(s"Expected generated file with prefix '$prefix'"))
     Files.readString(base.resolve(relative))
+  }
+
+  private def printGeneratedSources(base: Path): Unit = {
+    val scalaFiles = listScalaFiles(base).sorted
+    scalaFiles.foreach { relativePath =>
+      val content = Files.readString(base.resolve(relativePath))
+      println(
+        s"""**** $relativePath ****
+           |$content""".stripMargin
+      )
+    }
   }
 }
