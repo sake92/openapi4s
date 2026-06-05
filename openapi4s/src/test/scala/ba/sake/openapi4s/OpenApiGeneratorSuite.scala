@@ -106,7 +106,7 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     assert(generatedFiles.nonEmpty)
     assert(generatedFiles.exists(_.startsWith("models/Newtypes.scala")),
       s"Expected models/Newtypes.scala in: ${generatedFiles.mkString(", ")}")
-    assert(generatedFiles.exists(_.startsWith("models/") && !_.contains("Newtypes")),
+    assert(generatedFiles.exists(gf => gf.startsWith("models/") && !gf.contains("Newtypes")),
       "Expected at least one model file besides Newtypes.scala")
 
     val newtypesFile = readGeneratedFile(baseFolder.resolve("pkg"), "models/Newtypes.scala")
