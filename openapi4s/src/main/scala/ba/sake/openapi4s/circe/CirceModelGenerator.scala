@@ -7,20 +7,27 @@ import scala.meta.dialects.Scala34
 import ba.sake.regenesca._
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 
-class CirceModelGenerator(config: OpenApiWriter.Config, openApiDefinition: OpenApiDefinition)
-    extends OpenApiGenerator {
+class CirceModelGenerator(
+    config: OpenApiWriter.Config,
+    openApiDefinition: OpenApiDefinition,
+    validationTypeMap: Map[String, Map[String, String]] = Map.empty
+) extends OpenApiGenerator {
 
   // keep track of done schemas (to avoid generating a subtype multiple times)
   private var generatedNamedSchemas = Set.empty[String]
 
   override def generate(): Seq[GeneratedFileSource] = {
     val modelsPkg = generatePkgSelect(s"${config.basePackage}.models")
-    val modelImports = List[Import](
+    val baseImports = List[Import](
       q"import java.time.*",
       q"import java.util.UUID",
       q"import io.circe.{Codec, Json}",
       q"import io.circe.derivation.{Configuration, ConfiguredCodec, ConfiguredEnumCodec}"
     )
+    val ironImport = if (validationTypeMap.nonEmpty) List[Import](
+      q"import io.github.iltotore.iron.circe.given"
+    ) else List.empty
+    val modelImports = baseImports ++ ironImport
     val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
       val namedSchemaName = namedSchemaDef.name.capitalize
       val modelSources = generateModelSources(namedSchemaDef, None)
@@ -47,7 +54,7 @@ class CirceModelGenerator(config: OpenApiWriter.Config, openApiDefinition: OpenA
       case obj: SchemaDefinition.Obj =>
         val params = obj.properties.flatMap { property =>
           try {
-            val propertyTpe = SchemaUtils.resolveType(
+            val resolvedType = SchemaUtils.resolveType(
               property.schema,
               Some(property.name),
               Some(namedSchemaName),
@@ -55,6 +62,16 @@ class CirceModelGenerator(config: OpenApiWriter.Config, openApiDefinition: OpenA
               context = s"${namedSchemaName}.${property.name}",
               fallbackAnyType = t"Json"
             )
+            val propertyTpe = validationTypeMap
+              .get(namedSchemaName)
+              .flatMap(_.get(property.name))
+              .map { newtypeName =>
+                property.schema match {
+                  case SchemaDefinition.Opt(_) => t"Option[${Type.Name(newtypeName)}]"
+                  case _                       => Type.Name(newtypeName)
+                }
+              }
+              .getOrElse(resolvedType)
             Some(param"${Term.Name(property.name)}: ${propertyTpe}")
           } catch {
             case e: UnsupportedSchemaException =>
