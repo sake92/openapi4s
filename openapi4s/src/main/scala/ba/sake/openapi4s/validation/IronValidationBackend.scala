@@ -103,7 +103,8 @@ object IronValidationBackend extends ValidationBackend {
     case email: SchemaDefinition.Email =>
       Some(("String", buildConstraintKey("Email", email.minLength, email.maxLength, None)))
     case pwd: SchemaDefinition.Password =>
-      Some(("String", buildConstraintKey("Password", pwd.minLength, pwd.maxLength, pwd.pattern)))
+      if (pwd.minLength.isEmpty && pwd.maxLength.isEmpty && pwd.pattern.isEmpty) None
+      else Some(("String", buildConstraintKey("Password", pwd.minLength, pwd.maxLength, pwd.pattern)))
     case str: SchemaDefinition.Str =>
       if (str.minLength.isEmpty && str.maxLength.isEmpty && str.pattern.isEmpty) None
       else Some(("String", buildConstraintKey("Str", str.minLength, str.maxLength, str.pattern)))
@@ -138,7 +139,7 @@ object IronValidationBackend extends ValidationBackend {
     minLength.foreach(m => parts += s"MinLen=$m")
     maxLength.foreach(m => parts += s"MaxLen=$m")
     pattern.foreach(p => parts += s"Match=$p")
-    parts.result().mkString("|")
+    parts.result().mkString("\u0001")
   }
 
   private def buildNumericConstraintKey(
@@ -150,7 +151,7 @@ object IronValidationBackend extends ValidationBackend {
     parts += prefix
     minimum.foreach(m => parts += s"Min=$m")
     maximum.foreach(m => parts += s"Max=$m")
-    parts.result().mkString("|")
+    parts.result().mkString("\u0001")
   }
 
   private def buildNumericDoubleConstraintKey(
@@ -162,7 +163,7 @@ object IronValidationBackend extends ValidationBackend {
     parts += prefix
     minimum.foreach(m => parts += s"Min=$m")
     maximum.foreach(m => parts += s"Max=$m")
-    parts.result().mkString("|")
+    parts.result().mkString("\u0001")
   }
 
   /** Generate the newtype definition for Newtypes.scala */
@@ -179,7 +180,7 @@ object IronValidationBackend extends ValidationBackend {
 
   /** Convert a constraint key to an Iron constraint Type using scala.meta AST construction directly. */
   private def constraintKeyToIronType(key: String, baseType: String): Type = {
-    val parts = key.split("\\|").toList.filterNot(_.isEmpty)
+    val parts = key.split("\u0001").toList.filterNot(_.isEmpty)
     val prefix = parts.headOption.getOrElse("")
 
     val constraints: List[Type] = parts.tail.flatMap {
@@ -194,8 +195,10 @@ object IronValidationBackend extends ValidationBackend {
       case s if s.startsWith("Min=") =>
         val value = s.stripPrefix("Min=")
         baseType match {
-          case "Int" | "Long" =>
+          case "Int" =>
             Some(Type.Apply(Type.Name("GreaterEqual"), List(Lit.Int(value.toDouble.toInt))))
+          case "Long" =>
+            Some(Type.Apply(Type.Name("GreaterEqual"), List(Lit.Long(value.toLong))))
           case "Float" | "Double" =>
             Some(Type.Apply(Type.Name("GreaterEqual"), List(Lit.Double(value.toDouble))))
           case _ => None
@@ -203,8 +206,10 @@ object IronValidationBackend extends ValidationBackend {
       case s if s.startsWith("Max=") =>
         val value = s.stripPrefix("Max=")
         baseType match {
-          case "Int" | "Long" =>
+          case "Int" =>
             Some(Type.Apply(Type.Name("LessEqual"), List(Lit.Int(value.toDouble.toInt))))
+          case "Long" =>
+            Some(Type.Apply(Type.Name("LessEqual"), List(Lit.Long(value.toLong))))
           case "Float" | "Double" =>
             Some(Type.Apply(Type.Name("LessEqual"), List(Lit.Double(value.toDouble))))
           case _ => None
