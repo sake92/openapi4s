@@ -14,7 +14,15 @@ Here is a small video demo: https://youtu.be/kf0vGrlKNb8
 
 ## Limitations
 - JSON only
-- only *named* entities, no anonymous objects
+
+---
+
+## Requirements
+
+The **tupson** models backend generates code that needs:
+
+- **Scala 3.7+** in your project
+- **tupson >= 0.20.0** dependency (`ivy"ba.sake::tupson:0.20.0"`)
 
 ---
 
@@ -24,10 +32,20 @@ Here is a small video demo: https://youtu.be/kf0vGrlKNb8
 ### Circe models backend
 - discriminated models (sealed traits / enums)
 - enums (singleton enums)
+- maps (`additionalProperties`)
 
 ### Tupson models backend
 - discriminated models (sealed traits / enums)
 - enums (singleton enums)
+- **named tuples** for anonymous (inline) objects, e.g. `meta: (kind: String, age: Int)`
+- **union types** for `oneOf`/`anyOf` without a discriminator, e.g. `type Pet = Cat | Dog`
+- **literal types** for `const` and single-value enums, e.g. `kind: "dog"`, `count: 5`
+- **literal unions** for inline and non-string enums, e.g. `status: "available" | "pending"`, `num: 1 | 2`
+- maps (`additionalProperties`), e.g. `extra: Map[String, String]`
+
+> When parsing union types, Tupson tries the members left-to-right and uses the
+> first one that parses. For overlapping object shapes use a `discriminator` in
+> your `oneOf` to get a sealed trait instead.
 
 ### Sharaf framework backend
 Supports almost all features:
