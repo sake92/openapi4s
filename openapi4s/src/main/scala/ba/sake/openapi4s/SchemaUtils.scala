@@ -47,8 +47,8 @@ object SchemaUtils {
       }
     case el: SchemaDefinition.EnumLiterals => enumLiteralsPlainType(el)
     case _: SchemaDefinition.Const         => fallbackAnyType
-    case SchemaDefinition.Ref(name)      => Type.Name(name)
-    case SchemaDefinition.Named(name, _) => Type.Name(name)
+    case SchemaDefinition.Ref(name)        => Type.Name(name)
+    case SchemaDefinition.Named(name, _)   => Type.Name(name)
     case SchemaDefinition.Obj(_) =>
       throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'object' [${context}]")
     case SchemaDefinition.MapObj(valueSchemaOpt) =>
@@ -59,7 +59,7 @@ object SchemaUtils {
       }
     case _: SchemaDefinition.OneOf =>
       throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'oneOf' [${context}]")
-    case _: SchemaDefinition.AnyOf => fallbackAnyType
+    case _: SchemaDefinition.AnyOf   => fallbackAnyType
     case _: SchemaDefinition.Unknown => fallbackAnyType
   }
 

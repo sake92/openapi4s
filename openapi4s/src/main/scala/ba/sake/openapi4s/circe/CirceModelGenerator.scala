@@ -24,9 +24,12 @@ class CirceModelGenerator(
       q"import io.circe.{Codec, Json}",
       q"import io.circe.derivation.{Configuration, ConfiguredCodec, ConfiguredEnumCodec}"
     )
-    val ironImport = if (validationTypeMap.nonEmpty) List[Import](
-      q"import io.github.iltotore.iron.circe.given"
-    ) else List.empty
+    val ironImport =
+      if (validationTypeMap.nonEmpty)
+        List[Import](
+          q"import io.github.iltotore.iron.circe.given"
+        )
+      else List.empty
     val modelImports = baseImports ++ ironImport
     val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
       val namedSchemaName = namedSchemaDef.name.capitalize

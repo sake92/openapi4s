@@ -14,15 +14,15 @@ class SchemaDefinitionResolver {
     val schemaDefs = schemas.flatMap { case (schemaKey, schema) =>
       val schemaDef = resolveSchema(schema, schemaKey)
       schemaDef match {
-        case obj: SchemaDefinition.Obj            => Some(SchemaDefinition.Named(schemaKey, obj))
-        case enm: SchemaDefinition.Enum           => Some(SchemaDefinition.Named(schemaKey, enm))
-        case enmL: SchemaDefinition.EnumLiterals  => Some(SchemaDefinition.Named(schemaKey, enmL))
-        case const: SchemaDefinition.Const        => Some(SchemaDefinition.Named(schemaKey, const))
-        case mapObj: SchemaDefinition.MapObj      => Some(SchemaDefinition.Named(schemaKey, mapObj))
-        case arr: SchemaDefinition.Arr            => Some(SchemaDefinition.Named(schemaKey, arr))
-        case oneOf: SchemaDefinition.OneOf        => Some(SchemaDefinition.Named(schemaKey, oneOf))
-        case anyOf: SchemaDefinition.AnyOf        => Some(SchemaDefinition.Named(schemaKey, anyOf))
-        case allOf: SchemaDefinition.AllOf        => Some(SchemaDefinition.Named(schemaKey, allOf))
+        case obj: SchemaDefinition.Obj           => Some(SchemaDefinition.Named(schemaKey, obj))
+        case enm: SchemaDefinition.Enum          => Some(SchemaDefinition.Named(schemaKey, enm))
+        case enmL: SchemaDefinition.EnumLiterals => Some(SchemaDefinition.Named(schemaKey, enmL))
+        case const: SchemaDefinition.Const       => Some(SchemaDefinition.Named(schemaKey, const))
+        case mapObj: SchemaDefinition.MapObj     => Some(SchemaDefinition.Named(schemaKey, mapObj))
+        case arr: SchemaDefinition.Arr           => Some(SchemaDefinition.Named(schemaKey, arr))
+        case oneOf: SchemaDefinition.OneOf       => Some(SchemaDefinition.Named(schemaKey, oneOf))
+        case anyOf: SchemaDefinition.AnyOf       => Some(SchemaDefinition.Named(schemaKey, anyOf))
+        case allOf: SchemaDefinition.AllOf       => Some(SchemaDefinition.Named(schemaKey, allOf))
         case other =>
           println(
             s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!!"
@@ -234,17 +234,20 @@ class SchemaDefinitionResolver {
 
   private def getEnumLiterals(schema: Schema[?], defaultValue: Option[String]): Option[SchemaDefinition.EnumLiterals] =
     Option(schema.getEnum).map { enumSchema =>
-      SchemaDefinition.EnumLiterals(enumSchema.asScala.toList.map(v => toEnumLiteral(v.asInstanceOf[Object])), defaultValue)
+      SchemaDefinition.EnumLiterals(
+        enumSchema.asScala.toList.map(v => toEnumLiteral(v.asInstanceOf[Object])),
+        defaultValue
+      )
     }
 
   private def toEnumLiteral(value: Any): EnumLiteral = value match {
-    case s: String                  => EnumLiteral.StrValue(s)
-    case i: java.lang.Integer       => EnumLiteral.IntValue(i.intValue)
-    case l: java.lang.Long          => EnumLiteral.LongValue(l.longValue)
-    case b: java.lang.Boolean       => EnumLiteral.BoolValue(b.booleanValue)
-    case d: java.lang.Double        => EnumLiteral.NumValue(d.doubleValue)
-    case f: java.lang.Float         => EnumLiteral.NumValue(f.doubleValue)
-    case bd: java.math.BigDecimal   => EnumLiteral.NumValue(bd.doubleValue)
+    case s: String                => EnumLiteral.StrValue(s)
+    case i: java.lang.Integer     => EnumLiteral.IntValue(i.intValue)
+    case l: java.lang.Long        => EnumLiteral.LongValue(l.longValue)
+    case b: java.lang.Boolean     => EnumLiteral.BoolValue(b.booleanValue)
+    case d: java.lang.Double      => EnumLiteral.NumValue(d.doubleValue)
+    case f: java.lang.Float       => EnumLiteral.NumValue(f.doubleValue)
+    case bd: java.math.BigDecimal => EnumLiteral.NumValue(bd.doubleValue)
     case other =>
       println(s"Unsupported enum/const literal value: '${other}' (${other.getClass}). Treating it as a string literal.")
       EnumLiteral.StrValue(other.toString)

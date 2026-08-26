@@ -107,10 +107,10 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
           sealed trait ${typeName} derives JsonRW
           """
         ) ++ oneOfCases
-      case aliasSchema: NameableSchemaDefinition
-          if isTypeAliasSchema(aliasSchema) =>
+      case aliasSchema: NameableSchemaDefinition if isTypeAliasSchema(aliasSchema) =>
         // named enums with raw values, consts, maps, ad hoc unions -> type aliases
-        List(q"type ${typeName} = ${TupsonTypeResolver.resolveType(aliasSchema, None, None, allowNullable = true, namedSchemaName, t"JValue")}")
+        List(q"type ${typeName} = ${TupsonTypeResolver
+            .resolveType(aliasSchema, None, None, allowNullable = true, namedSchemaName, t"JValue")}")
       case allOfSchema: SchemaDefinition.AllOf =>
         val allOfCases: List[SchemaDefinition] = allOfSchema.schemas.flatMap {
           case SchemaDefinition.Ref(refName) =>

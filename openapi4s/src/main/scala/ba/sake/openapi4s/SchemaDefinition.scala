@@ -4,7 +4,6 @@ case class NamedSchemaDefinitions(
     defs: Seq[SchemaDefinition.Named]
 )
 
-
 sealed abstract class SchemaDefinition
 
 trait NameableSchemaDefinition extends SchemaDefinition // marker trait

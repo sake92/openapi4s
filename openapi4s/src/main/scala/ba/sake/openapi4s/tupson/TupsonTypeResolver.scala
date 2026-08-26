@@ -18,7 +18,8 @@ object TupsonTypeResolver {
       val core = resolveType(tpe, propertyName, parentTypeName, allowNullable = allowNullable, context, fallbackAnyType)
       if (allowNullable) t"Option[$core]" else core
     case arr: SchemaDefinition.Arr =>
-      val core = resolveType(arr.schema, propertyName, parentTypeName, allowNullable = allowNullable, context, fallbackAnyType)
+      val core =
+        resolveType(arr.schema, propertyName, parentTypeName, allowNullable = allowNullable, context, fallbackAnyType)
       if (arr.uniqueItems) t"Set[$core]" else t"Seq[$core]"
     case obj: SchemaDefinition.Obj          => namedTupleType(obj, context, fallbackAnyType)
     case e: SchemaDefinition.Enum           => literalUnionType(e.values.map(v => Lit.String(v): Lit))
