@@ -129,8 +129,9 @@ class SchemaDefinitionResolver {
     val format = Option(schema.getFormat)
     Option(schema.getEnum) match {
       case Some(enumSchema) =>
-        val values = enumSchema.asScala.toList.map(_.toString)
-        SchemaDefinition.Enum(values, defaultValue)
+        val values = enumSchema.asScala.toList.flatMap(v => Option(v).map(_.toString))
+        if (values.isEmpty) SchemaDefinition.Str(defaultValue, None, None, None)
+        else SchemaDefinition.Enum(values, defaultValue)
       case None =>
         val minLength = Option(schema.getMinLength).map(_.intValue)
         val maxLength = Option(schema.getMaxLength).map(_.intValue)

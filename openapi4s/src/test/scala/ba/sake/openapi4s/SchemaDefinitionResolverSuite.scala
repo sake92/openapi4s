@@ -2,6 +2,7 @@ package ba.sake.openapi4s
 
 import scala.jdk.CollectionConverters._
 import io.swagger.parser.OpenAPIParser
+import io.swagger.v3.oas.models.media.StringSchema
 import ba.sake.openapi4s.SchemaDefinition._
 import ba.sake.openapi4s.EnumLiteral._
 
@@ -171,6 +172,21 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
   test("resolveSchema(null) returns Unknown instead of NPE") {
     val resolver = new SchemaDefinitionResolver()
     assertEquals(resolver.resolveSchema(null, "ctx"), SchemaDefinition.Unknown())
+  }
+
+  test("string schema enum ignores null values") {
+    val resolver = new SchemaDefinitionResolver()
+    val schema = new StringSchema()
+    schema.addEnumItemObject("open")
+    schema.addEnumItemObject(null)
+    assertEquals(resolver.resolveSchema(schema, "ctx"), SchemaDefinition.Enum(List("open"), None))
+  }
+
+  test("string schema enum with only null values falls back to Str") {
+    val resolver = new SchemaDefinitionResolver()
+    val schema = new StringSchema()
+    schema.addEnumItemObject(null)
+    assertEquals(resolver.resolveSchema(schema, "ctx"), SchemaDefinition.Str(None, None, None, None))
   }
 
 }
