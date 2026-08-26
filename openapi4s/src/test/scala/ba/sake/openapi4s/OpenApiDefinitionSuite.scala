@@ -10,7 +10,7 @@ class OpenApiDefinitionSuite extends munit.FunSuite {
         NamedSchemaDefinitions(
           Seq(
             Named("Dog", Obj(List(SchemaProperty("bark", Opt(Bool(None)))))),
-            Named("Pet", OneOf(List(Ref("Cat"), Ref("Dog")), "pet_type")),
+            Named("Pet", OneOf(List(Ref("Cat"), Ref("Dog")), Some("pet_type"))),
             Named("Cat", Obj(List(SchemaProperty("hunts", Opt(Bool(None))))))
           )
         ),
@@ -23,9 +23,9 @@ class OpenApiDefinitionSuite extends munit.FunSuite {
         NamedSchemaDefinitions(
           Seq(
             Named("Dog", Obj(List(SchemaProperty("bark", Opt(Bool(None)))))),
-            Named("Pet2", OneOf(List(Ref("Cat"), Ref("Dog")), "pet_type")),
+            Named("Pet2", OneOf(List(Ref("Cat"), Ref("Dog")), Some("pet_type"))),
             Named("Cat", Obj(List(SchemaProperty("hunts", Opt(Bool(None)))))),
-            Named("Pet", OneOf(List(Ref("Cat"), Ref("Dog")), "pet_type"))
+            Named("Pet", OneOf(List(Ref("Cat"), Ref("Dog")), Some("pet_type")))
           )
         ),
         PathDefinitions(defs = List())

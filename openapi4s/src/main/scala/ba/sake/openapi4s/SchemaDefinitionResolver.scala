@@ -14,11 +14,15 @@ class SchemaDefinitionResolver {
     val schemaDefs = schemas.flatMap { case (schemaKey, schema) =>
       val schemaDef = resolveSchema(schema, schemaKey)
       schemaDef match {
-        case obj: SchemaDefinition.Obj     => Some(SchemaDefinition.Named(schemaKey, obj))
-        case enm: SchemaDefinition.Enum    => Some(SchemaDefinition.Named(schemaKey, enm))
-        case arr: SchemaDefinition.Arr     => Some(SchemaDefinition.Named(schemaKey, arr))
-        case oneOf: SchemaDefinition.OneOf => Some(SchemaDefinition.Named(schemaKey, oneOf))
-        case allOf: SchemaDefinition.AllOf => Some(SchemaDefinition.Named(schemaKey, allOf))
+        case obj: SchemaDefinition.Obj            => Some(SchemaDefinition.Named(schemaKey, obj))
+        case enm: SchemaDefinition.Enum           => Some(SchemaDefinition.Named(schemaKey, enm))
+        case enmL: SchemaDefinition.EnumLiterals  => Some(SchemaDefinition.Named(schemaKey, enmL))
+        case const: SchemaDefinition.Const        => Some(SchemaDefinition.Named(schemaKey, const))
+        case mapObj: SchemaDefinition.MapObj      => Some(SchemaDefinition.Named(schemaKey, mapObj))
+        case arr: SchemaDefinition.Arr            => Some(SchemaDefinition.Named(schemaKey, arr))
+        case oneOf: SchemaDefinition.OneOf        => Some(SchemaDefinition.Named(schemaKey, oneOf))
+        case anyOf: SchemaDefinition.AnyOf        => Some(SchemaDefinition.Named(schemaKey, anyOf))
+        case allOf: SchemaDefinition.AllOf        => Some(SchemaDefinition.Named(schemaKey, allOf))
         case other =>
           println(
             s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!!"
@@ -31,6 +35,15 @@ class SchemaDefinitionResolver {
 
   def resolveSchema(schema: Schema[?], context: String): SchemaDefinition = {
     val defaultValue = Option(schema.getDefault).map(_.toString)
+    // 'const' (OpenAPI 3.1) wins over everything else
+    Option(schema.getConst.asInstanceOf[Object])
+      .map(v => SchemaDefinition.Const(toEnumLiteral(v), defaultValue))
+      .getOrElse {
+        resolveSchemaInner(schema, context, defaultValue)
+      }
+  }
+
+  private def resolveSchemaInner(schema: Schema[?], context: String, defaultValue: Option[String]): SchemaDefinition = {
     val baseSchemaDef: SchemaDefinition = schema match {
       case _: StringSchema | _: PasswordSchema | _: EmailSchema | _: ByteArraySchema | _: UUIDSchema | _: DateSchema |
           _: DateTimeSchema =>
@@ -40,10 +53,10 @@ class SchemaDefinitionResolver {
       case _: NumberSchema =>
         getNumberSchema(schema)
       case _: BooleanSchema =>
-        SchemaDefinition.Bool(defaultValue)
+        getEnumLiterals(schema, defaultValue).getOrElse(SchemaDefinition.Bool(defaultValue))
       case _: ArraySchema =>
         getArraySchema(schema, context)
-      case _: ObjectSchema =>
+      case _: ObjectSchema | _: MapSchema =>
         getObjectSchema(schema, context)
       case _: ComposedSchema =>
         getComposedSchema(schema, context).getOrElse {
@@ -137,24 +150,39 @@ class SchemaDefinitionResolver {
 
   private def getIntegerSchema(schema: Schema[?]): SchemaDefinition = {
     val defaultValue = Option(schema.getDefault).map(_.toString)
-    val min = Option(schema.getMinimum)
-    val max = Option(schema.getMaximum)
-    if (schema.getFormat == "int32")
-      SchemaDefinition.Int32(defaultValue, minimum = min.map(_.intValue), maximum = max.map(_.intValue))
-    else
-      SchemaDefinition.Int64(defaultValue, minimum = min.map(_.longValue), maximum = max.map(_.longValue))
+    getEnumLiterals(schema, defaultValue).getOrElse {
+      val min = Option(schema.getMinimum)
+      val max = Option(schema.getMaximum)
+      if (schema.getFormat == "int32")
+        SchemaDefinition.Int32(defaultValue, minimum = min.map(_.intValue), maximum = max.map(_.intValue))
+      else
+        SchemaDefinition.Int64(defaultValue, minimum = min.map(_.longValue), maximum = max.map(_.longValue))
+    }
   }
 
   private def getNumberSchema(schema: Schema[?]): SchemaDefinition = {
     val defaultValue = Option(schema.getDefault).map(_.toString)
-    val min = Option(schema.getMinimum)
-    val max = Option(schema.getMaximum)
-    if (schema.getFormat == "float")
-      SchemaDefinition.Num32(defaultValue, minimum = min.map(_.floatValue), maximum = max.map(_.floatValue))
-    else SchemaDefinition.Num64(defaultValue, minimum = min.map(_.doubleValue), maximum = max.map(_.doubleValue))
+    getEnumLiterals(schema, defaultValue).getOrElse {
+      val min = Option(schema.getMinimum)
+      val max = Option(schema.getMaximum)
+      if (schema.getFormat == "float")
+        SchemaDefinition.Num32(defaultValue, minimum = min.map(_.floatValue), maximum = max.map(_.floatValue))
+      else SchemaDefinition.Num64(defaultValue, minimum = min.map(_.doubleValue), maximum = max.map(_.doubleValue))
+    }
   }
 
-  private def getObjectSchema(schema: Schema[?], context: String): SchemaDefinition.Obj = {
+  private def getObjectSchema(schema: Schema[?], context: String): SchemaDefinition = {
+    Option(schema.getAdditionalProperties) match {
+      case Some(valueSchema: Schema[?]) =>
+        SchemaDefinition.MapObj(Some(resolveSchema(valueSchema, context)))
+      case Some(_: java.lang.Boolean) if Option(schema.getProperties).forall(_.isEmpty) =>
+        SchemaDefinition.MapObj(None)
+      case _ =>
+        getObjectProperties(schema, context)
+    }
+  }
+
+  private def getObjectProperties(schema: Schema[?], context: String): SchemaDefinition.Obj = {
     val requiredProperties = Option(schema.getRequired).map(_.asScala.toSet).getOrElse(Set.empty)
     val properties = Option(schema.getProperties)
       .map(_.asScala)
@@ -173,6 +201,7 @@ class SchemaDefinitionResolver {
     Option(schema.getOneOf())
       .map(_ => getOneOfSchema(schema, context))
       .orElse(Option(schema.getAllOf()).map(_ => getAllOfSchema(schema, context)))
+      .orElse(Option(schema.getAnyOf()).map(_ => getAnyOfSchema(schema, context)))
   }
 
   private def getOneOfSchema(schema: Schema[?], context: String): SchemaDefinition.OneOf = {
@@ -180,6 +209,12 @@ class SchemaDefinitionResolver {
       Option(schema.getOneOf).map(_.asScala).getOrElse(List.empty).map(s => resolveSchema(s, context)).toList
     val discriminatorPropertyName = Option(schema.getDiscriminator).map(_.getPropertyName)
     SchemaDefinition.OneOf(schemas, discriminatorPropertyName = discriminatorPropertyName)
+  }
+
+  private def getAnyOfSchema(schema: Schema[?], context: String): SchemaDefinition.AnyOf = {
+    val schemas =
+      Option(schema.getAnyOf).map(_.asScala).getOrElse(List.empty).map(s => resolveSchema(s, context)).toList
+    SchemaDefinition.AnyOf(schemas)
   }
 
   private def getAllOfSchema(schema: Schema[?], context: String): SchemaDefinition.AllOf = {
@@ -195,6 +230,24 @@ class SchemaDefinitionResolver {
     val minItems = Option(schema.getMinItems).map(_.intValue)
     val maxItems = Option(schema.getMaxItems).map(_.intValue)
     SchemaDefinition.Arr(arrayItemsType, minItems = minItems, maxItems = maxItems, uniqueItems = uniqueItems)
+  }
+
+  private def getEnumLiterals(schema: Schema[?], defaultValue: Option[String]): Option[SchemaDefinition.EnumLiterals] =
+    Option(schema.getEnum).map { enumSchema =>
+      SchemaDefinition.EnumLiterals(enumSchema.asScala.toList.map(v => toEnumLiteral(v.asInstanceOf[Object])), defaultValue)
+    }
+
+  private def toEnumLiteral(value: Any): EnumLiteral = value match {
+    case s: String                  => EnumLiteral.StrValue(s)
+    case i: java.lang.Integer       => EnumLiteral.IntValue(i.intValue)
+    case l: java.lang.Long          => EnumLiteral.LongValue(l.longValue)
+    case b: java.lang.Boolean       => EnumLiteral.BoolValue(b.booleanValue)
+    case d: java.lang.Double        => EnumLiteral.NumValue(d.doubleValue)
+    case f: java.lang.Float         => EnumLiteral.NumValue(f.doubleValue)
+    case bd: java.math.BigDecimal   => EnumLiteral.NumValue(bd.doubleValue)
+    case other =>
+      println(s"Unsupported enum/const literal value: '${other}' (${other.getClass}). Treating it as a string literal.")
+      EnumLiteral.StrValue(other.toString)
   }
 
 }

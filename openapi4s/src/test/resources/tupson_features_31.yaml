@@ -1,0 +1,33 @@
+openapi: 3.1.0
+info:
+  title: tupson features 3.1
+  version: 1
+
+paths:
+  /pets:
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithConst"
+      responses:
+        "200":
+          description: Updated
+
+components:
+  schemas:
+    # const as property types
+    WithConst:
+      type: object
+      properties:
+        kind:
+          type: string
+          const: dog
+        count:
+          type: integer
+          const: 5
+    # const as a named schema
+    Marker:
+      type: string
+      const: abc

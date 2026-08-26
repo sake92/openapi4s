@@ -3,6 +3,7 @@ package ba.sake.openapi4s
 import scala.jdk.CollectionConverters._
 import io.swagger.parser.OpenAPIParser
 import ba.sake.openapi4s.SchemaDefinition._
+import ba.sake.openapi4s.EnumLiteral._
 
 class SchemaDefinitionResolverSuite extends munit.FunSuite {
 
@@ -35,6 +36,144 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
   test("SchemaDefinitionResolver should resolve oneOf.yaml named schemas") {
     val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "oneOf.yaml"))
    // pprint.pprintln(openApiDefinition)
+  }
+
+  test("SchemaDefinitionResolver should resolve tupson_features.yaml named schemas") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("tupson_features.yaml"))
+    def named(name: String) = openApiDefinition.namedSchemaDefinitions.defs.find(_.name == name).get
+    // anonymous objects stay Obj
+    assertEquals(
+      named("Container"),
+      Named(
+        "Container",
+        Obj(
+          List(
+            SchemaProperty(
+              "meta",
+              Opt(
+                Obj(
+                  List(
+                    SchemaProperty("kind", Opt(Str(None, None, None, None))),
+                    SchemaProperty("age", Opt(Int32(None, None, None)))
+                  )
+                )
+              )
+            ),
+            SchemaProperty(
+              "nested",
+              Opt(
+                Obj(
+                  List(
+                    SchemaProperty(
+                      "inner",
+                      Opt(Obj(List(SchemaProperty("x", Opt(Str(None, None, None, None))))))
+                    )
+                  )
+                )
+              )
+            ),
+            SchemaProperty(
+              "items",
+              Opt(
+                Arr(
+                  Obj(
+                    List(
+                      SchemaProperty("a", Opt(Int32(None, None, None))),
+                      SchemaProperty("b", Opt(Str(None, None, None, None)))
+                    )
+                  ),
+                  None,
+                  None,
+                  uniqueItems = false
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    // inline string enums
+    assertEquals(
+      named("WithEnum"),
+      Named(
+        "WithEnum",
+        Obj(
+          List(
+            SchemaProperty("status", Opt(Enum(List("available", "pending", "sold"), None))),
+            SchemaProperty("singleVal", Opt(Enum(List("only"), None)))
+          )
+        )
+      )
+    )
+    // integer and boolean enums
+    assertEquals(
+      named("WithIntEnum"),
+      Named("WithIntEnum", Obj(List(SchemaProperty("num", Opt(EnumLiterals(List(IntValue(1), IntValue(2)), None))))))
+    )
+    assertEquals(
+      named("WithBoolEnum"),
+      Named(
+        "WithBoolEnum",
+        Obj(List(SchemaProperty("flag", Opt(EnumLiterals(List(BoolValue(true), BoolValue(false)), None)))))
+      )
+    )
+    // additionalProperties
+    assertEquals(
+      named("WithMap"),
+      Named(
+        "WithMap",
+        Obj(
+          List(
+            SchemaProperty("extra", Opt(MapObj(Some(Str(None, None, None, None))))),
+            SchemaProperty("freeForm", Opt(MapObj(None)))
+          )
+        )
+      )
+    )
+    // oneOf with/without discriminator
+    assertEquals(
+      named("Pet"),
+      Named("Pet", OneOf(List(Ref("Cat"), Ref("Dog")), Some("pet_type")))
+    )
+    assertEquals(
+      named("Animal"),
+      Named("Animal", OneOf(List(Ref("Cat"), Ref("Dog")), None))
+    )
+    // anyOf
+    assertEquals(
+      named("AnyThing"),
+      Named("AnyThing", AnyOf(List(Ref("Cat"), Ref("Dog"))))
+    )
+    // named non-string enum and named map
+    assertEquals(
+      named("Level"),
+      Named("Level", EnumLiterals(List(IntValue(1), IntValue(2), IntValue(3)), None))
+    )
+    assertEquals(
+      named("Tags"),
+      Named("Tags", MapObj(Some(Str(None, None, None, None))))
+    )
+  }
+
+  test("SchemaDefinitionResolver should resolve tupson_features_31.yaml named schemas") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("tupson_features_31.yaml"))
+    def named(name: String) = openApiDefinition.namedSchemaDefinitions.defs.find(_.name == name).get
+    assertEquals(
+      named("WithConst"),
+      Named(
+        "WithConst",
+        Obj(
+          List(
+            SchemaProperty("kind", Opt(Const(StrValue("dog"), None))),
+            SchemaProperty("count", Opt(Const(IntValue(5), None)))
+          )
+        )
+      )
+    )
+    assertEquals(
+      named("Marker"),
+      Named("Marker", Const(StrValue("abc"), None))
+    )
   }
 
 }

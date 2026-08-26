@@ -1,0 +1,121 @@
+openapi: 3.0.0
+info:
+  title: tupson features
+  version: 1
+
+paths:
+  /pets:
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Container"
+      responses:
+        "200":
+          description: Updated
+
+components:
+  schemas:
+    # anonymous objects: inline, nested, in array
+    Container:
+      type: object
+      properties:
+        meta:
+          type: object
+          properties:
+            kind:
+              type: string
+            age:
+              type: integer
+              format: int32
+        nested:
+          type: object
+          properties:
+            inner:
+              type: object
+              properties:
+                x:
+                  type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              a:
+                type: integer
+                format: int32
+              b:
+                type: string
+    # inline string enums: multi-value and single-value
+    WithEnum:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [available, pending, sold]
+        singleVal:
+          type: string
+          enum: [only]
+    # integer enum
+    WithIntEnum:
+      type: object
+      properties:
+        num:
+          type: integer
+          format: int32
+          enum: [1, 2]
+    # boolean enum
+    WithBoolEnum:
+      type: object
+      properties:
+        flag:
+          type: boolean
+          enum: [true, false]
+    # additionalProperties: typed map and free-form map
+    WithMap:
+      type: object
+      properties:
+        extra:
+          type: object
+          additionalProperties:
+            type: string
+        freeForm:
+          type: object
+          additionalProperties: true
+    # oneOf with discriminator
+    Pet:
+      oneOf:
+        - $ref: "#/components/schemas/Cat"
+        - $ref: "#/components/schemas/Dog"
+      discriminator:
+        propertyName: pet_type
+    # oneOf without discriminator
+    Animal:
+      oneOf:
+        - $ref: "#/components/schemas/Cat"
+        - $ref: "#/components/schemas/Dog"
+    # anyOf
+    AnyThing:
+      anyOf:
+        - $ref: "#/components/schemas/Cat"
+        - $ref: "#/components/schemas/Dog"
+    # named non-string enums and maps
+    Level:
+      type: integer
+      format: int32
+      enum: [1, 2, 3]
+    Tags:
+      type: object
+      additionalProperties:
+        type: string
+    Cat:
+      type: object
+      properties:
+        hunts:
+          type: boolean
+    Dog:
+      type: object
+      properties:
+        bark:
+          type: boolean

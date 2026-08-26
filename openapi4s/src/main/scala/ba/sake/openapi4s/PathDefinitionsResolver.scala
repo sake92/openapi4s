@@ -174,11 +174,15 @@ class PathDefinitionsResolver(
     case _: SchemaDefinition.DateTime      => true
     case SchemaDefinition.Opt(innerSchema) => isAllowedPathParamSchema(innerSchema)
     case _: SchemaDefinition.Enum          => true
+    case _: SchemaDefinition.EnumLiterals  => true
+    case _: SchemaDefinition.Const         => true
     case SchemaDefinition.Arr(_, _, _, _)  => false
     case _: SchemaDefinition.Ref           => false
     case _: SchemaDefinition.Named         => false
     case _: SchemaDefinition.Obj           => false
+    case _: SchemaDefinition.MapObj        => false
     case _: SchemaDefinition.OneOf         => false
+    case _: SchemaDefinition.AnyOf         => false
     case _: SchemaDefinition.Unknown       => false
   }
 
@@ -198,11 +202,15 @@ class PathDefinitionsResolver(
     case _: SchemaDefinition.DateTime               => true
     case SchemaDefinition.Opt(innerSchema)          => isAllowedQueryParamSchema(innerSchema)
     case _: SchemaDefinition.Enum                   => true
+    case _: SchemaDefinition.EnumLiterals           => true
+    case _: SchemaDefinition.Const                  => true
     case SchemaDefinition.Arr(innerSchema, _, _, _) => isAllowedQueryParamSchema(innerSchema)
     case _: SchemaDefinition.Ref                    => true
     case _: SchemaDefinition.Named                  => true
     case _: SchemaDefinition.Obj                    => false
+    case _: SchemaDefinition.MapObj                 => false
     case _: SchemaDefinition.OneOf                  => false
+    case _: SchemaDefinition.AnyOf                  => false
     case _: SchemaDefinition.Unknown                => false
   }
 
@@ -222,11 +230,15 @@ class PathDefinitionsResolver(
     case _: SchemaDefinition.DateTime               => true
     case SchemaDefinition.Opt(innerSchema)          => isAllowedBodySchema(innerSchema)
     case _: SchemaDefinition.Enum                   => true
+    case _: SchemaDefinition.EnumLiterals           => true
+    case _: SchemaDefinition.Const                  => true
     case SchemaDefinition.Arr(innerSchema, _, _, _) => isAllowedBodySchema(innerSchema)
     case _: SchemaDefinition.Ref                    => true
     case _: SchemaDefinition.Named                  => true
     case _: SchemaDefinition.Obj                    => false
+    case _: SchemaDefinition.MapObj                 => false
     case _: SchemaDefinition.OneOf                  => false
+    case _: SchemaDefinition.AnyOf                  => false
     case _: SchemaDefinition.Unknown                => false
   }
 
