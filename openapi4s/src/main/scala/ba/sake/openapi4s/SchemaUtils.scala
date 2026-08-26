@@ -45,10 +45,10 @@ object SchemaUtils {
         case _ =>
           throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for unnamed 'enum' [${context}]")
       }
-    case el: SchemaDefinition.EnumLiterals  => enumLiteralsPlainType(el)
-    case _: SchemaDefinition.Const          => fallbackAnyType
-    case SchemaDefinition.Ref(name)         => ScalaIdents.typeName(name)
-    case SchemaDefinition.Named(name, _)    => ScalaIdents.typeName(name)
+    case el: SchemaDefinition.EnumLiterals => enumLiteralsPlainType(el)
+    case _: SchemaDefinition.Const         => fallbackAnyType
+    case SchemaDefinition.Ref(name)        => ScalaIdents.typeName(name.capitalize)
+    case SchemaDefinition.Named(name, _)   => ScalaIdents.typeName(name.capitalize)
     case SchemaDefinition.Obj(_) =>
       throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'object' [${context}]")
     case SchemaDefinition.MapObj(valueSchemaOpt) =>
@@ -85,6 +85,16 @@ object SchemaUtils {
     val camelizedParentType = CaseUtils.toCamelCase(parentType, true, '_')
     val camelizedPropName = CaseUtils.toCamelCase(propName, true, '_')
     s"${camelizedParentType}${camelizedPropName}"
+  }
+
+  /** Finds enum values inside a schema, unwrapping Opt/Arr wrappers. Mirrors resolveType's recursion so that every
+    * enum type reference has a corresponding ad-hoc enum definition.
+    */
+  def enumValuesOf(schema: SchemaDefinition): Option[List[String]] = schema match {
+    case SchemaDefinition.Enum(values, _)            => Some(values)
+    case SchemaDefinition.Opt(inner)                 => enumValuesOf(inner)
+    case SchemaDefinition.Arr(inner, _, _, _)        => enumValuesOf(inner)
+    case _                                           => None
   }
 
 }

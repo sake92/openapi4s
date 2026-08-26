@@ -90,34 +90,26 @@ class CirceModelGenerator(
         }
         // enums defined in-place, we invent a new name for them..
         val adHocEnums = obj.properties.flatMap { property =>
-          val enumValuesOpt = property.schema match {
-            case SchemaDefinition.Enum(values, _)                                => Some(values)
-            case SchemaDefinition.Opt(SchemaDefinition.Enum(values, _))          => Some(values)
-            case SchemaDefinition.Arr(SchemaDefinition.Enum(values, _), _, _, _) => Some(values)
-            case _                                                               => None
-          }
-          enumValuesOpt
-            .map { values =>
-              val adhocEnumName = SchemaUtils.generateEnumName(namedSchemaName, property.name)
-              val adhocEnumType = Type.Name(adhocEnumName)
-              val adhocEnumTerm = Term.Name(adhocEnumName)
-              val enumCaseDefs = Defn.RepeatedEnumCase(
-                List.empty,
-                values.map { enumDefCaseValue =>
-                  ScalaIdents.termName(enumDefCaseValue)
-                }
-              )
-              List(
-                q" enum ${adhocEnumType} { ${enumCaseDefs} } ",
-                q"""
+          SchemaUtils.enumValuesOf(property.schema).map { values =>
+            val adhocEnumName = SchemaUtils.generateEnumName(namedSchemaName, property.name)
+            val adhocEnumType = Type.Name(adhocEnumName)
+            val adhocEnumTerm = Term.Name(adhocEnumName)
+            val enumCaseDefs = Defn.RepeatedEnumCase(
+              List.empty,
+              values.map { enumDefCaseValue =>
+                ScalaIdents.termName(enumDefCaseValue)
+              }
+            )
+            List(
+              q" enum ${adhocEnumType} { ${enumCaseDefs} } ",
+              q"""
                 object ${adhocEnumTerm} {
                   given Configuration =  Configuration.default
                   given Codec[${adhocEnumType}] = ConfiguredEnumCodec.derived
                 }
               """
-              )
-            }
-            .getOrElse(List.empty)
+            )
+          }.getOrElse(List.empty)
         }
         val classDefinition: List[Stat] = superType match {
           case Some(st) =>

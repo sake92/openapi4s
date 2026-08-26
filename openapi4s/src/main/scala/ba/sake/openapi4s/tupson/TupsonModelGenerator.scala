@@ -43,7 +43,28 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
         }
       }
     }
-    modelFileSources
+    // tupson does not provide JsonRW for java.time.LocalDate, so we emit one
+    val localDateInstance = GeneratedFileSource(
+      Paths.get("models/LocalDateJsonRW.scala"),
+      source"""
+        // generated with OpenApi4s
+        package ${modelsPkg} {
+          import java.time.LocalDate
+          import org.typelevel.jawn.ast.{JString, JValue}
+          import ba.sake.tupson.*
+          given JsonRW[LocalDate] with {
+            override def write(value: LocalDate): JValue = JString(value.toString)
+            override def parse(path: String, jValue: JValue): LocalDate = jValue match
+              case JString(s) => LocalDate.parse(s)
+              case other =>
+                throw ParsingException(
+                  ParseError(path, "should be a date string", Some(other.render().take(100)))
+                )
+          }
+        }
+      """
+    )
+    localDateInstance +: modelFileSources
   }
 
   def generateModelSources(namedSchemaDef: SchemaDefinition.Named, superType: Option[Type]): List[Stat] = {
@@ -70,6 +91,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
               None
           }
         }
+
         // validation
         val validatorStmts = ValidsonUtils.generateStms(typeName, obj.properties.map(p => (p.name, p.schema)))
         val classDefinition = superType match {
