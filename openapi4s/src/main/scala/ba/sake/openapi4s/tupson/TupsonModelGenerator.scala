@@ -49,7 +49,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
       case obj: SchemaDefinition.Obj =>
         val params = obj.properties.flatMap { property =>
           try {
-            val propertyTpe = SchemaUtils.resolveType(
+            val propertyTpe = TupsonTypeResolver.resolveType(
               property.schema,
               Some(property.name),
               Some(namedSchemaName),
@@ -64,28 +64,6 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
               None
           }
         }
-        // enums defined in-place, we invent a new name for them..
-        val adHocEnums = obj.properties.flatMap { property =>
-          val enumValuesOpt = property.schema match {
-            case SchemaDefinition.Enum(values, _)                                => Some(values)
-            case SchemaDefinition.Opt(SchemaDefinition.Enum(values, _))          => Some(values)
-            case SchemaDefinition.Arr(SchemaDefinition.Enum(values, _), _, _, _) => Some(values)
-            case _                                                               => None
-          }
-          enumValuesOpt.flatMap { values =>
-            val adhocEnumName = SchemaUtils.generateEnumName(namedSchemaName, property.name)
-            val adhocEnumType = Type.Name(adhocEnumName)
-            val enumCaseDefs = Defn.RepeatedEnumCase(
-              List.empty,
-              values.map { enumDefCaseValue =>
-                Term.Name(enumDefCaseValue)
-              }
-            )
-            Some(
-              q""" enum ${adhocEnumType} derives JsonRW { ${enumCaseDefs} }"""
-            )
-          }
-        }
         // validation
         val validatorStmts = ValidsonUtils.generateStms(typeName, obj.properties.map(p => (p.name, p.schema)))
         val classDefinition = superType match {
@@ -97,7 +75,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
         val modelDefStats = List(classDefinition) ++
           Option.when(validatorStmts.nonEmpty)(q""" object ${termName} { ..${validatorStmts} } """).toList
 
-        modelDefStats ++ adHocEnums
+        modelDefStats
       case enumDef: SchemaDefinition.Enum =>
         val enumCaseDefs = Defn.RepeatedEnumCase(
           List.empty,
@@ -108,10 +86,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
         List(
           q"""enum ${typeName} derives JsonRW { ${enumCaseDefs} } """
         )
-      case _: SchemaDefinition.Arr =>
-        // TODO type alias ???
-        List.empty
-      case oneOfSchema: SchemaDefinition.OneOf =>
+      case oneOfSchema: SchemaDefinition.OneOf if oneOfSchema.discriminatorPropertyName.isDefined =>
         val oneOfCases = oneOfSchema.schemas.flatMap {
           case SchemaDefinition.Ref(refName) =>
             openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName) match {
@@ -126,11 +101,15 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
         }
         List(
           q"""
-          @discriminator(${Lit.String(oneOfSchema.discriminatorPropertyName.getOrElse("@type"))})
+          @discriminator(${Lit.String(oneOfSchema.discriminatorPropertyName.get)})
           sealed trait ${typeName} derives JsonRW
           """,
           q"""  object ${termName} { ..${oneOfCases} } """
         )
+      case aliasSchema: NameableSchemaDefinition
+          if isTypeAliasSchema(aliasSchema) =>
+        // named enums with raw values, consts, maps, ad hoc unions -> type aliases
+        List(q"type ${typeName} = ${TupsonTypeResolver.resolveType(aliasSchema, None, None, allowNullable = true, namedSchemaName, t"JValue")}")
       case allOfSchema: SchemaDefinition.AllOf =>
         val allOfCases: List[SchemaDefinition] = allOfSchema.schemas.flatMap {
           case SchemaDefinition.Ref(refName) =>
@@ -151,12 +130,24 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
           SchemaDefinition.Named(namedSchemaName, SchemaDefinition.Obj(mergedSchemasProps)),
           superType
         )
+      case _: SchemaDefinition.Arr =>
+        // TODO type alias ???
+        List.empty
       case other =>
         println(s"Unsupported named schema type for tupson: '${other.getClass.getSimpleName}' [${namedSchemaName}]")
         List.empty
     }
     generatedNamedSchemas += namedSchemaName
     generatedModelSources
+  }
+
+  private def isTypeAliasSchema(s: NameableSchemaDefinition): Boolean = s match {
+    case _: SchemaDefinition.EnumLiterals => true
+    case _: SchemaDefinition.Const        => true
+    case _: SchemaDefinition.MapObj       => true
+    case _: SchemaDefinition.OneOf        => true // without discriminator
+    case _: SchemaDefinition.AnyOf        => true
+    case _                                => false
   }
 
   private def generatePkgSelect(pkg: String) = {

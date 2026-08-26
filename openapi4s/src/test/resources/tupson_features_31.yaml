@@ -20,6 +20,7 @@ components:
     # const as property types
     WithConst:
       type: object
+      required: [kind, count]
       properties:
         kind:
           type: string

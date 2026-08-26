@@ -20,9 +20,11 @@ components:
     # anonymous objects: inline, nested, in array
     Container:
       type: object
+      required: [meta, nested, items]
       properties:
         meta:
           type: object
+          required: [kind, age]
           properties:
             kind:
               type: string
@@ -31,9 +33,11 @@ components:
               format: int32
         nested:
           type: object
+          required: [inner]
           properties:
             inner:
               type: object
+              required: [x]
               properties:
                 x:
                   type: string
@@ -41,6 +45,7 @@ components:
           type: array
           items:
             type: object
+            required: [a, b]
             properties:
               a:
                 type: integer
@@ -50,6 +55,7 @@ components:
     # inline string enums: multi-value and single-value
     WithEnum:
       type: object
+      required: [status, singleVal]
       properties:
         status:
           type: string
@@ -60,6 +66,7 @@ components:
     # integer enum
     WithIntEnum:
       type: object
+      required: [num]
       properties:
         num:
           type: integer
@@ -68,6 +75,7 @@ components:
     # boolean enum
     WithBoolEnum:
       type: object
+      required: [flag]
       properties:
         flag:
           type: boolean
@@ -75,6 +83,7 @@ components:
     # additionalProperties: typed map and free-form map
     WithMap:
       type: object
+      required: [extra, freeForm]
       properties:
         extra:
           type: object

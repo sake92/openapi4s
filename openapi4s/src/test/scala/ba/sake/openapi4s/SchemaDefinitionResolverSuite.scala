@@ -50,42 +50,36 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
           List(
             SchemaProperty(
               "meta",
-              Opt(
-                Obj(
-                  List(
-                    SchemaProperty("kind", Opt(Str(None, None, None, None))),
-                    SchemaProperty("age", Opt(Int32(None, None, None)))
-                  )
+              Obj(
+                List(
+                  SchemaProperty("kind", Str(None, None, None, None)),
+                  SchemaProperty("age", Int32(None, None, None))
                 )
               )
             ),
             SchemaProperty(
               "nested",
-              Opt(
-                Obj(
-                  List(
-                    SchemaProperty(
-                      "inner",
-                      Opt(Obj(List(SchemaProperty("x", Opt(Str(None, None, None, None))))))
-                    )
+              Obj(
+                List(
+                  SchemaProperty(
+                    "inner",
+                    Obj(List(SchemaProperty("x", Str(None, None, None, None))))
                   )
                 )
               )
             ),
             SchemaProperty(
               "items",
-              Opt(
-                Arr(
-                  Obj(
-                    List(
-                      SchemaProperty("a", Opt(Int32(None, None, None))),
-                      SchemaProperty("b", Opt(Str(None, None, None, None)))
-                    )
-                  ),
-                  None,
-                  None,
-                  uniqueItems = false
-                )
+              Arr(
+                Obj(
+                  List(
+                    SchemaProperty("a", Int32(None, None, None)),
+                    SchemaProperty("b", Str(None, None, None, None))
+                  )
+                ),
+                None,
+                None,
+                uniqueItems = false
               )
             )
           )
@@ -99,8 +93,8 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
         "WithEnum",
         Obj(
           List(
-            SchemaProperty("status", Opt(Enum(List("available", "pending", "sold"), None))),
-            SchemaProperty("singleVal", Opt(Enum(List("only"), None)))
+            SchemaProperty("status", Enum(List("available", "pending", "sold"), None)),
+            SchemaProperty("singleVal", Enum(List("only"), None))
           )
         )
       )
@@ -108,13 +102,13 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
     // integer and boolean enums
     assertEquals(
       named("WithIntEnum"),
-      Named("WithIntEnum", Obj(List(SchemaProperty("num", Opt(EnumLiterals(List(IntValue(1), IntValue(2)), None))))))
+      Named("WithIntEnum", Obj(List(SchemaProperty("num", EnumLiterals(List(IntValue(1), IntValue(2)), None)))))
     )
     assertEquals(
       named("WithBoolEnum"),
       Named(
         "WithBoolEnum",
-        Obj(List(SchemaProperty("flag", Opt(EnumLiterals(List(BoolValue(true), BoolValue(false)), None)))))
+        Obj(List(SchemaProperty("flag", EnumLiterals(List(BoolValue(true), BoolValue(false)), None))))
       )
     )
     // additionalProperties
@@ -124,8 +118,8 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
         "WithMap",
         Obj(
           List(
-            SchemaProperty("extra", Opt(MapObj(Some(Str(None, None, None, None))))),
-            SchemaProperty("freeForm", Opt(MapObj(None)))
+            SchemaProperty("extra", MapObj(Some(Str(None, None, None, None)))),
+            SchemaProperty("freeForm", MapObj(None))
           )
         )
       )
@@ -164,8 +158,8 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
         "WithConst",
         Obj(
           List(
-            SchemaProperty("kind", Opt(Const(StrValue("dog"), None))),
-            SchemaProperty("count", Opt(Const(IntValue(5), None)))
+            SchemaProperty("kind", Const(StrValue("dog"), None)),
+            SchemaProperty("count", Const(IntValue(5), None))
           )
         )
       )
