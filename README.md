@@ -44,6 +44,40 @@ Contributions welcome!
 
 ---
 
+## Validation backends
+
+You can optionally enable compile-time validation of your generated models with the `--validation` flag:
+
+| `--validation` | Works with | What it does |
+|---|---|---|
+| `none` (default) | all | No validation. Models use plain Scala types. |
+| `iron` | `--models circe` | Generates [Iron](https://github.com/iltotore/iron) newtypes (e.g. `Email`, `Username`) for constrained properties, plus a `models/Newtypes.scala` file. Models become *correct by construction* — decoding an invalid value fails. |
+| `validson` | `--models tupson` | Enables runtime validation of Tupson models with [Validson](https://github.com/sake92/validson). |
+
+Incompatible combinations (e.g. `--models tupson --validation iron`) are rejected at startup.
+
+### Iron validation
+
+```shell
+--models circe --framework none --validation iron
+```
+
+Generated models use newtypes such as:
+
+```scala
+type Email = Email.T
+object Email extends RefinedType[String, Match["^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"]]
+```
+
+You need to add these dependencies to your own build:
+
+```scala
+ivy"io.github.iltotore::iron:3.0.2"
+ivy"io.github.iltotore::iron-circe:3.0.2"
+```
+
+---
+
 ## Usage
 
 ### Mill plugin
@@ -58,6 +92,7 @@ You can use `openapi4s-cli` with Coursier launcher to generate your sources:
 cs launch ba.sake::openapi4s-cli:0.6.1 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models tupson \
   --framework sharaf \
+  --validation none \
   --url openapi.json \
   --baseFolder src \
   --basePackage com.example

@@ -45,7 +45,7 @@ object IronValidationBackend extends ValidationBackend {
         // Single constraint: shared name = capitalized propName
         val typeName = propName.capitalize
         val entry = entries.head
-        newtypeStmts += generateNewtypeDef(typeName, entry.baseType, entry.constraintKey)
+        newtypeStmts ++= generateNewtypeDef(typeName, entry.baseType, entry.constraintKey)
 
         entries.foreach { e =>
           val sm = typeMap.getOrElse(e.schemaName, Map.empty)
@@ -55,7 +55,7 @@ object IronValidationBackend extends ValidationBackend {
         // Different constraints: prefix with schema name
         entries.foreach { entry =>
           val typeName = s"${entry.schemaName}${entry.propName.capitalize}"
-          newtypeStmts += generateNewtypeDef(typeName, entry.baseType, entry.constraintKey)
+          newtypeStmts ++= generateNewtypeDef(typeName, entry.baseType, entry.constraintKey)
 
           val sm = typeMap.getOrElse(entry.schemaName, Map.empty)
           typeMap(entry.schemaName) = sm + (entry.propName -> typeName)
@@ -67,10 +67,10 @@ object IronValidationBackend extends ValidationBackend {
       (Seq.empty, Map.empty)
     } else {
       val pkgParts = config.basePackage.split("\\.").toList
-      val modelsPkg = pkgParts.init.foldLeft[Term.Ref](Term.Name(pkgParts.head)) { (acc, part) =>
+      val basePkg = pkgParts.tail.foldLeft[Term.Ref](Term.Name(pkgParts.head)) { (acc, part) =>
         Term.Select(acc, Term.Name(part))
       }
-      val modelsPkgSelect = Term.Select(modelsPkg, Term.Name("models"))
+      val modelsPkgSelect = Term.Select(basePkg, Term.Name("models"))
 
       val imports = List[Import](
         q"import io.github.iltotore.iron.*",
@@ -171,11 +171,15 @@ object IronValidationBackend extends ValidationBackend {
       typeName: String,
       baseType: String,
       constraintKey: String
-  ): Stat = {
+  ): List[Stat] = {
     val constraintT = constraintKeyToIronType(constraintKey, baseType)
     val baseTypeT = Type.Name(baseType)
-    
-    q"""object ${Term.Name(typeName)} extends io.github.iltotore.iron.RefinedType[$baseTypeT, $constraintT]"""
+    val tName = Type.Name(typeName)
+    val oName = Term.Name(typeName)
+
+    val alias = Defn.Type(Nil, tName, Nil, Type.Select(oName, Type.Name("T")), Type.Bounds(None, None))
+    val obj = q"""object ${oName} extends io.github.iltotore.iron.RefinedType[$baseTypeT, $constraintT]"""
+    List(alias, obj)
   }
 
   /** Convert a constraint key to an Iron constraint Type using scala.meta AST construction directly. */
