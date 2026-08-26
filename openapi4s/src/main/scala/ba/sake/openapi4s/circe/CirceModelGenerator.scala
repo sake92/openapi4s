@@ -148,6 +148,17 @@ class CirceModelGenerator(
       case _: SchemaDefinition.Arr =>
         // TODO type alias ???
         List.empty
+      case mapObj: SchemaDefinition.MapObj =>
+        // maps are natively supported by circe
+        val aliasTpe = SchemaUtils.resolveType(
+          mapObj,
+          None,
+          None,
+          allowNullable = true,
+          context = namedSchemaName,
+          fallbackAnyType = t"Json"
+        )
+        List(q"type ${typeName} = ${aliasTpe}")
       case oneOfSchema: SchemaDefinition.OneOf =>
         val oneOfCases = oneOfSchema.schemas.flatMap {
           case SchemaDefinition.Ref(refName) =>
