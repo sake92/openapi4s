@@ -4,11 +4,12 @@ import scala.meta._
 import scala.meta.dialects.Scala34
 import org.apache.commons.text.CaseUtils
 import ba.sake.openapi4s.SchemaDefinition
+import ba.sake.openapi4s.ScalaIdents
 
 object ValidsonUtils {
   def generateStms(typeName: Type, properties: List[(String, SchemaDefinition)]): List[Stat] = {
     val validationCalls = properties.flatMap { case (name, schema) =>
-      val propName = Term.Name(name)
+      val propName = ScalaIdents.termName(name)
       schema match {
         case int: SchemaDefinition.Int32 =>
           List(

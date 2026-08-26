@@ -23,18 +23,24 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
       q"import ba.sake.tupson.*",
       q"import ba.sake.validson.Validator"
     )
+    val generatedFileNames = scala.collection.mutable.Set.empty[String]
     val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
       val namedSchemaName = namedSchemaDef.name.capitalize
-      val modelSources = generateModelSources(namedSchemaDef, None)
-      val allStmts = modelImports ++ modelSources
-      Option.when(modelSources.nonEmpty) {
-        GeneratedFileSource(
-          Paths.get(s"models/${namedSchemaName}.scala"),
-          source"""
-            // generated with OpenApi4s
-            package ${modelsPkg} { ..${allStmts} }
-          """
-        )
+      if (!generatedFileNames.add(namedSchemaName)) {
+        println(s"Duplicate model file name '${namedSchemaName}'. Skipping the model.")
+        None
+      } else {
+        val modelSources = generateModelSources(namedSchemaDef, None)
+        val allStmts = modelImports ++ modelSources
+        Option.when(modelSources.nonEmpty) {
+          GeneratedFileSource(
+            Paths.get(s"models/${namedSchemaName}.scala"),
+            source"""
+              // generated with OpenApi4s
+              package ${modelsPkg} { ..${allStmts} }
+            """
+          )
+        }
       }
     }
     modelFileSources
@@ -43,8 +49,8 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
   def generateModelSources(namedSchemaDef: SchemaDefinition.Named, superType: Option[Type]): List[Stat] = {
     val namedSchemaName = namedSchemaDef.name.capitalize
     if (generatedNamedSchemas(namedSchemaName)) return List.empty
-    val typeName = Type.Name(namedSchemaName)
-    val termName = Term.Name(namedSchemaName)
+    val typeName = ScalaIdents.typeName(namedSchemaName)
+    val termName = ScalaIdents.termName(namedSchemaName)
     val generatedModelSources = namedSchemaDef.schema match {
       case obj: SchemaDefinition.Obj =>
         val params = obj.properties.flatMap { property =>
@@ -57,7 +63,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
               context = s"${namedSchemaName}.${property.name}",
               fallbackAnyType = t"JValue"
             )
-            Some(param"${Term.Name(property.name)}: ${propertyTpe}")
+            Some(param"${ScalaIdents.termName(property.name)}: ${propertyTpe}")
           } catch {
             case e: UnsupportedSchemaException =>
               println(e.toString)
@@ -80,7 +86,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
         val enumCaseDefs = Defn.RepeatedEnumCase(
           List.empty,
           enumDef.values.map { enumDefCaseValue =>
-            Term.Name(enumDefCaseValue)
+            ScalaIdents.termName(enumDefCaseValue)
           }
         )
         List(
@@ -101,12 +107,17 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
         }
         // subtypes are generated at package level, so that they can be referenced
         // by other schemas too (e.g. union type aliases)
-        List(
-          q"""
-          @discriminator(${Lit.String(oneOfSchema.discriminatorPropertyName.get)})
-          sealed trait ${typeName} derives JsonRW
-          """
-        ) ++ oneOfCases
+        if (oneOfCases.isEmpty) {
+          println(s"OneOf without supported sub-schemas at '${namedSchemaName}'. Skipping the model.")
+          List.empty
+        } else {
+          List(
+            q"""
+            @discriminator(${Lit.String(oneOfSchema.discriminatorPropertyName.get)})
+            sealed trait ${typeName} derives JsonRW
+            """
+          ) ++ oneOfCases
+        }
       case aliasSchema: NameableSchemaDefinition if isTypeAliasSchema(aliasSchema) =>
         // named enums with raw values, consts, maps, ad hoc unions -> type aliases
         List(q"type ${typeName} = ${TupsonTypeResolver

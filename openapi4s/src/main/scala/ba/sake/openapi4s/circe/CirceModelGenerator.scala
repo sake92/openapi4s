@@ -31,18 +31,24 @@ class CirceModelGenerator(
         )
       else List.empty
     val modelImports = baseImports ++ ironImport
+    val generatedFileNames = scala.collection.mutable.Set.empty[String]
     val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
       val namedSchemaName = namedSchemaDef.name.capitalize
-      val modelSources = generateModelSources(namedSchemaDef, None)
-      val allStmts = modelImports ++ modelSources
-      Option.when(modelSources.nonEmpty) {
-        GeneratedFileSource(
-          Paths.get(s"models/${namedSchemaName}.scala"),
-          source"""
-            // generated with OpenApi4s
-            package ${modelsPkg} { ..${allStmts} }
-          """
-        )
+      if (!generatedFileNames.add(namedSchemaName)) {
+        println(s"Duplicate model file name '${namedSchemaName}'. Skipping the model.")
+        None
+      } else {
+        val modelSources = generateModelSources(namedSchemaDef, None)
+        val allStmts = modelImports ++ modelSources
+        Option.when(modelSources.nonEmpty) {
+          GeneratedFileSource(
+            Paths.get(s"models/${namedSchemaName}.scala"),
+            source"""
+              // generated with OpenApi4s
+              package ${modelsPkg} { ..${allStmts} }
+            """
+          )
+        }
       }
     }
     modelFileSources
@@ -51,8 +57,8 @@ class CirceModelGenerator(
   private def generateModelSources(namedSchemaDef: SchemaDefinition.Named, superType: Option[Type]): List[Stat] = {
     val namedSchemaName = namedSchemaDef.name.capitalize
     if (generatedNamedSchemas(namedSchemaName)) return List.empty
-    val typeName = Type.Name(namedSchemaName)
-    val termName = Term.Name(namedSchemaName)
+    val typeName = ScalaIdents.typeName(namedSchemaName)
+    val termName = ScalaIdents.termName(namedSchemaName)
     val generatedModelSources = namedSchemaDef.schema match {
       case obj: SchemaDefinition.Obj =>
         val params = obj.properties.flatMap { property =>
@@ -75,7 +81,7 @@ class CirceModelGenerator(
                 }
               }
               .getOrElse(resolvedType)
-            Some(param"${Term.Name(property.name)}: ${propertyTpe}")
+            Some(param"${ScalaIdents.termName(property.name)}: ${propertyTpe}")
           } catch {
             case e: UnsupportedSchemaException =>
               println(e.toString)
@@ -98,7 +104,7 @@ class CirceModelGenerator(
               val enumCaseDefs = Defn.RepeatedEnumCase(
                 List.empty,
                 values.map { enumDefCaseValue =>
-                  Term.Name(enumDefCaseValue)
+                  ScalaIdents.termName(enumDefCaseValue)
                 }
               )
               List(
@@ -136,7 +142,7 @@ class CirceModelGenerator(
         val enumCaseDefs = Defn.RepeatedEnumCase(
           List.empty,
           enumDef.values.map { enumDefCaseValue =>
-            Term.Name(enumDefCaseValue)
+            ScalaIdents.termName(enumDefCaseValue)
           }
         )
         List(
@@ -175,17 +181,42 @@ class CirceModelGenerator(
             println(s"Unsupported oneOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
             None
         }
-        List(
-          q"sealed trait ${typeName} ",
-          q"""
-            object ${termName} {
-              given Configuration =  Configuration.default.withDiscriminator(${Lit.String(
-              oneOfSchema.discriminatorPropertyName.getOrElse("@type")
-            )})
-              given Codec[${typeName}] = ConfiguredCodec.derived
-              ..${oneOfCases}
-            }
-          """
+        if (oneOfCases.isEmpty) {
+          println(s"OneOf without supported sub-schemas at '${namedSchemaName}'. Skipping the model.")
+          List.empty
+        } else {
+          List(
+            q"sealed trait ${typeName} ",
+            q"""
+              object ${termName} {
+                given Configuration =  Configuration.default.withDiscriminator(${Lit.String(
+                oneOfSchema.discriminatorPropertyName.getOrElse("@type")
+              )})
+                given Codec[${typeName}] = ConfiguredCodec.derived
+                ..${oneOfCases}
+              }
+            """
+          )
+        }
+      case allOfSchema: SchemaDefinition.AllOf =>
+        // merge allOf members into a single object model (same as TupsonModelGenerator)
+        val allOfCases: List[SchemaDefinition] = allOfSchema.schemas.flatMap {
+          case SchemaDefinition.Ref(refName) =>
+            openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName).map(_.schema)
+          case obj: SchemaDefinition.Obj => Some(obj)
+          case other =>
+            println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+            None
+        }
+        val mergedSchemasProps: List[SchemaProperty] = allOfCases.flatMap {
+          case SchemaDefinition.Obj(props) => props
+          case other =>
+            println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+            List.empty
+        }
+        generateModelSources(
+          SchemaDefinition.Named(namedSchemaName, SchemaDefinition.Obj(mergedSchemasProps)),
+          superType
         )
       case other =>
         println(s"Unsupported named schema type for circe: '${other.getClass.getSimpleName}' [${namedSchemaName}]")
