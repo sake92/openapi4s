@@ -29,23 +29,48 @@ class SharafGenerator(
   ): List[GeneratedFileSource] = {
     val controllerName = CaseUtils.toCamelCase(tag, true, '_') + "Controller"
     val controllerTypeName = Type.Name(controllerName)
+    val pathParamEnums = scala.collection.mutable.LinkedHashMap.empty[String, (List[String], Type.Name)]
+    def adhocPathParamEnum(values: List[String], paramName: String): Type.Name = {
+      val baseName = SchemaUtils.generateEnumName("PP", paramName)
+      pathParamEnums.get(baseName) match {
+        case Some((existingValues, tpe)) if existingValues == values => tpe
+        case Some(_) =>
+          val tpe = Type.Name(baseName + pathParamEnums.size)
+          pathParamEnums.put(tpe.value, (values, tpe))
+          tpe
+        case None =>
+          val tpe = Type.Name(baseName)
+          pathParamEnums.put(baseName, (values, tpe))
+          tpe
+      }
+    }
     val casesnel = pathDefinitions.map { pathDef =>
       val pathSegmentPatterns = pathDef.pathSegments.map {
         case PathSegment.Literal(value) => Lit.String(value)
         case PathSegment.Param(name, schema) =>
-          val tpe =
-            SchemaUtils.resolveType(
-              schema,
-              None,
-              None,
-              allowNullable = false,
-              s"${pathDef.method} '${pathDef.path}' path param",
-              fallbackAnyType = t"String"
-            )
-          if (tpe.structure == t"String".structure) Pat.Var(Term.Name(name))
-          else {
-            val paramName = Pat.Var(Term.Name(name))
-            p"param[${tpe}]($paramName)"
+          extractEnumValues(schema) match {
+            case Some(values) =>
+              val enumType = adhocPathParamEnum(values, name)
+              p"param[${enumType}](${Pat.Var(ScalaIdents.termName(name))})"
+            case None =>
+              try {
+                val tpe =
+                  SchemaUtils.resolveType(
+                    schema,
+                    None,
+                    None,
+                    allowNullable = false,
+                    s"${pathDef.method} '${pathDef.path}' path param",
+                    fallbackAnyType = t"String"
+                  )
+                val paramName = Pat.Var(ScalaIdents.termName(name))
+                if (tpe.structure == t"String".structure) paramName
+                else p"param[${tpe}]($paramName)"
+              } catch {
+                case e: UnsupportedSchemaException =>
+                  println(e.toString)
+                  Pat.Var(ScalaIdents.termName(name))
+              }
           }
       }
       val pathSegmentPatternsClause = Pat.ArgClause(pathSegmentPatterns)
@@ -59,14 +84,14 @@ class SharafGenerator(
               val enumCaseDefs = Defn.RepeatedEnumCase(
                 List.empty,
                 qp.schema.asInstanceOf[SchemaDefinition.Enum].values.map { enumDefCaseValue =>
-                  Term.Name(enumDefCaseValue)
+                  ScalaIdents.termName(enumDefCaseValue)
                 }
               )
               q"""enum ${adhocEnumType} derives QueryStringRW {
                     ${enumCaseDefs}
                 }"""
             }
-            val qpName = Name(qp.name)
+            val qpName = ScalaIdents.termName(qp.name)
             try {
               val tpe = SchemaUtils.resolveType(
                 qp.schema,
@@ -142,6 +167,13 @@ class SharafGenerator(
         """
       pathDefCase
     }
+    val adhocEnumStmts = pathParamEnums.values.map { case (values, tpe) =>
+      val enumCaseDefs = Defn.RepeatedEnumCase(
+        List.empty,
+        values.map { enumDefCaseValue => ScalaIdents.termName(enumDefCaseValue) }
+      )
+      q"enum ${tpe} derives FromPathParam { ${enumCaseDefs} }"
+    }.toList
     val pkg = generatePkgSelect(s"${config.basePackage}.controllers")
     val imports = List[Import](
       q"import java.time.*",
@@ -158,6 +190,7 @@ class SharafGenerator(
         // generated with OpenApi4s
         package ${pkg} {
             ..${imports}
+            ..${adhocEnumStmts}
 
             class ${controllerTypeName} {
                 def routes = Routes{ ..case ${casesnel} }
@@ -174,6 +207,12 @@ class SharafGenerator(
     packageComponents.tail.tail.foldLeft(firstSelect) { (a, b) =>
       q"${a}.${Term.Name(b)}"
     }
+  }
+
+  private def extractEnumValues(schema: SchemaDefinition): Option[List[String]] = schema match {
+    case SchemaDefinition.Enum(values, _)                       => Some(values)
+    case SchemaDefinition.Opt(SchemaDefinition.Enum(values, _)) => Some(values)
+    case _                                                      => None
   }
 
 }

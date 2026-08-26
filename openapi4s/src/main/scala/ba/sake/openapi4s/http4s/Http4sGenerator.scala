@@ -32,7 +32,7 @@ class Http4sGenerator(
       val pathSegmentPatterns = pathDef.pathSegments.map {
         case PathSegment.Literal(value) => Lit.String(value)
         case PathSegment.Param(name, schema) =>
-          val tpe =
+          try {
             SchemaUtils.resolveType(
               schema,
               None,
@@ -41,11 +41,11 @@ class Http4sGenerator(
               s"${pathDef.method} '${pathDef.path}' path param",
               fallbackAnyType = t"String"
             )
-          if (tpe.structure == t"String".structure) Pat.Var(Term.Name(name))
-          else {
-            val paramName = Pat.Var(Term.Name(name))
-            // p"param[${tpe}]($paramName)"
-            p"$paramName"
+            Pat.Var(ScalaIdents.termName(name))
+          } catch {
+            case e: UnsupportedSchemaException =>
+              println(e.toString)
+              Pat.Var(ScalaIdents.termName(name))
           }
       }
 
