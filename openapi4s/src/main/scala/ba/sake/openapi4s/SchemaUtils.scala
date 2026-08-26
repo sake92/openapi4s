@@ -57,6 +57,13 @@ object SchemaUtils {
           t"Map[String, ${resolveType(vs, propertyName, parentTypeName, allowNullable = allowNullable, context, fallbackAnyType)}]"
         case None => t"Map[String, ${fallbackAnyType}]"
       }
+    case allOf: SchemaDefinition.AllOf =>
+      allOf.schemas match {
+        case List(single) =>
+          resolveType(single, propertyName, parentTypeName, allowNullable, context, fallbackAnyType)
+        case _ =>
+          throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'allOf' [${context}]")
+      }
     case _: SchemaDefinition.OneOf =>
       throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'oneOf' [${context}]")
     case _: SchemaDefinition.AnyOf   => fallbackAnyType

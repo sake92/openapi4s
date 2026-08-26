@@ -108,7 +108,15 @@ class PathDefinitionsResolver(
                     .reverse
                     .dropWhile(_ == '}')
                     .reverse
-                  val pathParamSchema = pathParamsMap(pathParamName)
+                  val pathParamSchema = pathParamsMap.getOrElse(
+                    pathParamName, {
+                      println(
+                        s"Path param '${pathParamName}' is in the path template '${pathKey}' " +
+                          s"but missing from the parameters list. Defaulting to Str."
+                      )
+                      SchemaDefinition.Str(None, None, None, None)
+                    }
+                  )
                   PathSegment.Param(pathParamName, pathParamSchema)
                 } else {
                   PathSegment.Literal(rawSegment)
@@ -181,6 +189,7 @@ class PathDefinitionsResolver(
     case _: SchemaDefinition.Named         => false
     case _: SchemaDefinition.Obj           => false
     case _: SchemaDefinition.MapObj        => false
+    case _: SchemaDefinition.AllOf         => false
     case _: SchemaDefinition.OneOf         => false
     case _: SchemaDefinition.AnyOf         => false
     case _: SchemaDefinition.Unknown       => false
@@ -209,6 +218,7 @@ class PathDefinitionsResolver(
     case _: SchemaDefinition.Named                  => true
     case _: SchemaDefinition.Obj                    => false
     case _: SchemaDefinition.MapObj                 => false
+    case _: SchemaDefinition.AllOf                  => false
     case _: SchemaDefinition.OneOf                  => false
     case _: SchemaDefinition.AnyOf                  => false
     case _: SchemaDefinition.Unknown                => false
@@ -237,6 +247,7 @@ class PathDefinitionsResolver(
     case _: SchemaDefinition.Named                  => true
     case _: SchemaDefinition.Obj                    => false
     case _: SchemaDefinition.MapObj                 => false
+    case _: SchemaDefinition.AllOf                  => false
     case _: SchemaDefinition.OneOf                  => false
     case _: SchemaDefinition.AnyOf                  => false
     case _: SchemaDefinition.Unknown                => false
