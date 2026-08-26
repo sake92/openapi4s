@@ -3,26 +3,23 @@ package ba.sake.openapi4s
 import java.nio.file.{Files, Path}
 import scala.jdk.CollectionConverters._
 
+/** Compiles generated Scala 3 sources with scala-cli (external tool, Scala 3 compiler). */
 object CompilationTestUtils {
 
-  def compileGenerated(base: Path): Unit = {
+  /** Compiles all .scala files under `base` with scala-cli. Fails the assertion on non-zero exit. */
+  def compileGenerated(base: Path, scalaVersion: String, dependencies: Seq[String]): Unit = {
     val scalaFiles = listScalaFiles(base)
     assert(scalaFiles.nonEmpty, s"No generated Scala files found under: $base")
 
-    val outDir = Files.createTempDirectory("openapi4s-compile-out")
-    val classpath = System.getProperty("java.class.path")
-    val args = Array(
-      "-classpath",
-      classpath,
-      "-d",
-      outDir.toString,
-      "-color:never"
-    ) ++ scalaFiles.map(f => base.resolve(f).toString)
+    val scalaCliBin = sys.env.getOrElse("SCALA_CLI_BIN", "scala-cli")
+    val args = List("compile", "--server=false", s"--scala=$scalaVersion") ++
+      dependencies.flatMap(d => List("--dependency", d)) ++
+      scalaFiles.map(f => base.resolve(f).toString)
 
-    val reporter = dottyMainProcess(args)
+    val (exitCode, output) = runProcess(scalaCliBin, args)
     assert(
-      !reporterHasErrors(reporter),
-      s"Generated sources failed to compile:\n${generatedSourcesLog(base)}"
+      exitCode == 0,
+      s"Generated sources failed to compile (scala-cli exit code $exitCode):\n$output"
     )
   }
 
@@ -42,21 +39,15 @@ object CompilationTestUtils {
     }
   }
 
-  // dotc is invoked via reflection because this test module is Scala 2.13
-  // and cannot reference Scala 3 classes directly (no TASTy reader).
-  private def dottyMainProcess(args: Array[String]): AnyRef = {
-    val mainCls = Class.forName("dotty.tools.dotc.Main")
-    val process = mainCls.getMethod("process", classOf[Array[String]])
-    process.invoke(null, args)
+  private def runProcess(bin: String, args: List[String]): (Int, String) = {
+    val outFile = Files.createTempFile("openapi4s-scalacli", ".log")
+    try {
+      val builder = new ProcessBuilder((bin :: args).asJava)
+      builder.redirectErrorStream(true)
+      builder.redirectOutput(outFile.toFile)
+      val process = builder.start()
+      val exitCode = process.waitFor()
+      (exitCode, Files.readString(outFile))
+    } finally Files.deleteIfExists(outFile)
   }
-
-  private def reporterHasErrors(reporter: AnyRef): Boolean =
-    reporter.getClass.getMethod("hasErrors").invoke(reporter).asInstanceOf[Boolean]
-
-  private def generatedSourcesLog(base: Path): String =
-    listScalaFiles(base)
-      .map { relativePath =>
-        s"**** $relativePath ****\n${Files.readString(base.resolve(relativePath))}"
-      }
-      .mkString("\n")
 }

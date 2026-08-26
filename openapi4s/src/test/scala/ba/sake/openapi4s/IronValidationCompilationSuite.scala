@@ -1,13 +1,13 @@
 package ba.sake.openapi4s
 
 import java.nio.file.{Files, Path}
+import scala.concurrent.duration.Duration
 
-/** Compiles generated Scala 3 sources with the Scala 3 compiler to make sure they are valid. */
+/** Compiles generated circe sources with scala-cli (Scala 3 compiler) to make sure they are valid. */
 class IronValidationCompilationSuite extends munit.FunSuite {
 
-  // dotc compilation is slow, especially when run in parallel with other test classes
-  override def munitTimeout: scala.concurrent.duration.Duration =
-    scala.concurrent.duration.Duration(120, "s")
+  // first CI run resolves deps + downloads the Scala 3 compiler, so the default 30s timeout is not enough
+  override def munitTimeout: Duration = Duration(10, "min")
 
   test("generated circe + iron sources compile") {
     val baseFolder = generate(
@@ -15,7 +15,16 @@ class IronValidationCompilationSuite extends munit.FunSuite {
       basePackage = "com.example.iron",
       validation = "iron"
     )
-    CompilationTestUtils.compileGenerated(baseFolder.resolve("com/example/iron"))
+    CompilationTestUtils.compileGenerated(
+      baseFolder.resolve("com/example/iron"),
+      scalaVersion = "3.7.3",
+      dependencies = Seq(
+        "io.circe::circe-core:0.14.10",
+        "io.circe::circe-generic:0.14.10",
+        "io.github.iltotore::iron:3.0.2",
+        "io.github.iltotore::iron-circe:3.0.2"
+      )
+    )
   }
 
   test("generated circe sources compile") {
@@ -24,7 +33,14 @@ class IronValidationCompilationSuite extends munit.FunSuite {
       basePackage = "com.example.plain",
       validation = "none"
     )
-    CompilationTestUtils.compileGenerated(baseFolder.resolve("com/example/plain"))
+    CompilationTestUtils.compileGenerated(
+      baseFolder.resolve("com/example/plain"),
+      scalaVersion = "3.7.3",
+      dependencies = Seq(
+        "io.circe::circe-core:0.14.10",
+        "io.circe::circe-generic:0.14.10"
+      )
+    )
   }
 
   private def generate(url: String, basePackage: String, validation: String): Path = {
