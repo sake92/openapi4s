@@ -99,13 +99,14 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
             println(s"Unsupported oneOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
             None
         }
+        // subtypes are generated at package level, so that they can be referenced
+        // by other schemas too (e.g. union type aliases)
         List(
           q"""
           @discriminator(${Lit.String(oneOfSchema.discriminatorPropertyName.get)})
           sealed trait ${typeName} derives JsonRW
-          """,
-          q"""  object ${termName} { ..${oneOfCases} } """
-        )
+          """
+        ) ++ oneOfCases
       case aliasSchema: NameableSchemaDefinition
           if isTypeAliasSchema(aliasSchema) =>
         // named enums with raw values, consts, maps, ad hoc unions -> type aliases

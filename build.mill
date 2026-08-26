@@ -23,6 +23,7 @@ object openapi4s extends SbtModule with Openapi4sPublishModule {
       // for compiling generated Scala 3 sources in tests (IronValidationCompilationSuite)
       mvn"org.scala-lang:scala3-compiler_3:3.7.3",
       mvn"ba.sake:tupson_3:0.20.0",
+      mvn"ba.sake:validson_3:0.19.0",
       mvn"io.circe:circe-core_3:0.14.10",
       mvn"io.circe:circe-generic_3:0.14.10",
       mvn"io.github.iltotore:iron_3:3.0.2",
