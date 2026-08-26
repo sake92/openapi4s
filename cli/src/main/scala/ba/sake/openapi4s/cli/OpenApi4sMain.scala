@@ -18,7 +18,9 @@ object OpenApi4sMain {
       @arg(doc = "Base folder for generated sources. Default is 'src/main/scala'")
       baseFolder: String = "src/main/scala",
       @arg(doc = "Base package for generated sources")
-      basePackage: String
+      basePackage: String,
+      @arg(doc = "Validation backend: 'none', 'iron' or 'validson'. If unset, defaults to 'none'.")
+      validation: String = "none"
   ) = {
     val writer = OpenApiWriter(
       config = OpenApiWriter.Config(
@@ -26,7 +28,8 @@ object OpenApi4sMain {
         baseFolder = Paths.get(baseFolder),
         basePackage = basePackage,
         models = models,
-        framework = framework
+        framework = framework,
+        validation = validation
       )
     )
     writer.write()

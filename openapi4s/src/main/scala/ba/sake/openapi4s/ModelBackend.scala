@@ -35,7 +35,11 @@ case class ModelContract(
 trait ModelBackend {
   def id: ModelBackendId
   def imports: ModelImportContract
-  def generator(config: Config, openapiDefinition: OpenApiDefinition): OpenApiGenerator
+  def generator(
+      config: Config,
+      openapiDefinition: OpenApiDefinition,
+      validationTypeMap: Map[String, Map[String, String]] = Map.empty
+  ): OpenApiGenerator
   def contract(config: Config): ModelContract = ModelContract(s"${config.basePackage}.models", id, imports)
 }
 
@@ -51,7 +55,7 @@ object ModelBackend {
   val none: ModelBackend = new ModelBackend {
     override val id: ModelBackendId = ModelBackendId.NoModel
     override val imports: ModelImportContract = ModelImportContracts.none
-    override def generator(config: Config, openapiDefinition: OpenApiDefinition): OpenApiGenerator =
+    override def generator(config: Config, openapiDefinition: OpenApiDefinition, validationTypeMap: Map[String, Map[String, String]] = Map.empty): OpenApiGenerator =
       new OpenApiGenerator {
         override def generate(): Seq[GeneratedFileSource] = Seq.empty
       }
@@ -60,15 +64,15 @@ object ModelBackend {
   val circe: ModelBackend = new ModelBackend {
     override val id: ModelBackendId = ModelBackendId.Circe
     override val imports: ModelImportContract = ModelImportContracts.circe
-    override def generator(config: Config, openapiDefinition: OpenApiDefinition): OpenApiGenerator =
-      new CirceModelGenerator(config, openapiDefinition)
+    override def generator(config: Config, openapiDefinition: OpenApiDefinition, validationTypeMap: Map[String, Map[String, String]] = Map.empty): OpenApiGenerator =
+      new CirceModelGenerator(config, openapiDefinition, validationTypeMap)
 
   }
 
   val tupson: ModelBackend = new ModelBackend {
     override val id: ModelBackendId = ModelBackendId.Tupson
     override val imports: ModelImportContract = ModelImportContracts.tupson
-    override def generator(config: Config, openapiDefinition: OpenApiDefinition): OpenApiGenerator =
+    override def generator(config: Config, openapiDefinition: OpenApiDefinition, validationTypeMap: Map[String, Map[String, String]] = Map.empty): OpenApiGenerator =
       new TupsonModelGenerator(config, openapiDefinition)
   }
 
