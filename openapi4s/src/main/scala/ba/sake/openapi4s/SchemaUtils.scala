@@ -45,10 +45,10 @@ object SchemaUtils {
         case _ =>
           throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for unnamed 'enum' [${context}]")
       }
-    case el: SchemaDefinition.EnumLiterals => enumLiteralsPlainType(el)
-    case _: SchemaDefinition.Const         => fallbackAnyType
-    case SchemaDefinition.Ref(name)        => Type.Name(name)
-    case SchemaDefinition.Named(name, _)   => Type.Name(name)
+    case el: SchemaDefinition.EnumLiterals  => enumLiteralsPlainType(el)
+    case _: SchemaDefinition.Const          => fallbackAnyType
+    case SchemaDefinition.Ref(name)         => ScalaIdents.typeName(name)
+    case SchemaDefinition.Named(name, _)    => ScalaIdents.typeName(name)
     case SchemaDefinition.Obj(_) =>
       throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'object' [${context}]")
     case SchemaDefinition.MapObj(valueSchemaOpt) =>
