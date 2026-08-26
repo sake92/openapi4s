@@ -34,13 +34,19 @@ class SchemaDefinitionResolver {
   }
 
   def resolveSchema(schema: Schema[?], context: String): SchemaDefinition = {
-    val defaultValue = Option(schema.getDefault).map(_.toString)
-    // 'const' (OpenAPI 3.1) wins over everything else
-    Option(schema.getConst.asInstanceOf[Object])
-      .map(v => SchemaDefinition.Const(toEnumLiteral(v), defaultValue))
-      .getOrElse {
-        resolveSchemaInner(schema, context, defaultValue)
-      }
+    Option(schema) match {
+      case None =>
+        println(s"Null schema at ${context}. Returning Unknown schema.")
+        SchemaDefinition.Unknown()
+      case Some(schema) =>
+        val defaultValue = Option(schema.getDefault).map(_.toString)
+        // 'const' (OpenAPI 3.1) wins over everything else
+        Option(schema.getConst.asInstanceOf[Object])
+          .map(v => SchemaDefinition.Const(toEnumLiteral(v), defaultValue))
+          .getOrElse {
+            resolveSchemaInner(schema, context, defaultValue)
+          }
+    }
   }
 
   private def resolveSchemaInner(schema: Schema[?], context: String, defaultValue: Option[String]): SchemaDefinition = {

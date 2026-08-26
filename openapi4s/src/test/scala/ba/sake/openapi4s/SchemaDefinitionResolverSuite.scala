@@ -168,6 +168,9 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
       named("Marker"),
       Named("Marker", Const(StrValue("abc"), None))
     )
+  test("resolveSchema(null) returns Unknown instead of NPE") {
+    val resolver = new SchemaDefinitionResolver()
+    assertEquals(resolver.resolveSchema(null, "ctx"), SchemaDefinition.Unknown())
   }
 
 }
