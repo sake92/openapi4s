@@ -45,14 +45,34 @@ object SchemaUtils {
         case _ =>
           throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for unnamed 'enum' [${context}]")
       }
+    case el: SchemaDefinition.EnumLiterals => enumLiteralsPlainType(el)
+    case _: SchemaDefinition.Const         => fallbackAnyType
     case SchemaDefinition.Ref(name)      => Type.Name(name)
     case SchemaDefinition.Named(name, _) => Type.Name(name)
     case SchemaDefinition.Obj(_) =>
       throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'object' [${context}]")
+    case SchemaDefinition.MapObj(valueSchemaOpt) =>
+      valueSchemaOpt match {
+        case Some(vs) =>
+          t"Map[String, ${resolveType(vs, propertyName, parentTypeName, allowNullable = allowNullable, context, fallbackAnyType)}]"
+        case None => t"Map[String, ${fallbackAnyType}]"
+      }
     case _: SchemaDefinition.OneOf =>
       throw new UnsupportedSchemaException(s"Cannot make up an ad hoc type for 'oneOf' [${context}]")
+    case _: SchemaDefinition.AnyOf => fallbackAnyType
     case _: SchemaDefinition.Unknown => fallbackAnyType
   }
+
+  private def enumLiteralsPlainType(el: SchemaDefinition.EnumLiterals): Type =
+    el.values.headOption
+      .map {
+        case _: EnumLiteral.IntValue  => t"Int"
+        case _: EnumLiteral.LongValue => t"Long"
+        case _: EnumLiteral.NumValue  => t"Double"
+        case _: EnumLiteral.BoolValue => t"Boolean"
+        case _: EnumLiteral.StrValue  => t"String"
+      }
+      .getOrElse(t"String")
 
   def generateEnumName(parentType: String, propName: String): String = {
     val camelizedParentType = CaseUtils.toCamelCase(parentType, true, '_')
