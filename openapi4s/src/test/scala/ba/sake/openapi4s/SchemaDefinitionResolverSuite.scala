@@ -189,4 +189,57 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
     assertEquals(resolver.resolveSchema(schema, "ctx"), SchemaDefinition.Str(None, None, None, None))
   }
 
+  test("alias named schemas resolve to their underlying type at $ref sites") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("aliases.yaml"))
+    val thing = openApiDefinition.namedSchemaDefinitions.defs.find(_.name == "Thing").get
+    assertEquals(
+      thing,
+      SchemaDefinition.Named(
+        "Thing",
+        Obj(List(
+          SchemaProperty("id", Opt(Uuid(None))),
+          SchemaProperty("status", Opt(Enum(List("open"), None)))
+        ))
+      )
+    )
+    val resBody = openApiDefinition.pathDefinitions.defs.head.resBody.get
+    assertEquals(resBody, ResBodyDefinition(Uuid(None)))
+  }
+
+  test("named array schemas resolve to inline Arr at $ref sites") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("arrays_alias.yaml"))
+    assertEquals(
+      openApiDefinition.namedSchemaDefinitions.defs.map(_.name),
+      Seq("Holder")
+    )
+    val holder = openApiDefinition.namedSchemaDefinitions.defs.head
+    assertEquals(holder, SchemaDefinition.Named("Holder", Obj(List(SchemaProperty("tags", Opt(Arr(Str(None, None, None, None), None, None, false)))))))
+  }
+
+  test("oneOf with inline members is not generated, $refs fall back to Unknown") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("oneof_inline.yaml"))
+    assertEquals(
+      openApiDefinition.namedSchemaDefinitions.defs.map(_.name),
+      Seq("Config")
+    )
+    assertEquals(
+      openApiDefinition.namedSchemaDefinitions.defs.head,
+      SchemaDefinition.Named("Config", Obj(List(SchemaProperty("ssl", Opt(Unknown())))))
+    )
+  }
+
+  test("oneOf whose members are a subset of another oneOf aliases to the superset") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("oneof_subset.yaml"))
+    val holder = openApiDefinition.namedSchemaDefinitions.defs.find(_.name == "Holder").get
+    assertEquals(
+      holder,
+      SchemaDefinition.Named("Holder", Obj(List(SchemaProperty("orgRule", Opt(Ref("Rule"))))))
+    )
+  }
+
+  test("media type without schema does not crash") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("null_schema.yaml"))
+    assertEquals(openApiDefinition.pathDefinitions.defs.head.resBody, None)
+  }
+
 }

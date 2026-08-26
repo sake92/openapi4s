@@ -8,29 +8,130 @@ import ba.sake.openapi4s.exceptions.UnsupportedSchemaDefinitionException
 // https://github.com/swagger-api/swagger-core/tree/v2.2.27/modules/swagger-models/src/main/java/io/swagger/v3/oas/models/media
 class SchemaDefinitionResolver {
 
+  // named schemas that don't get their own generated model:
+  // $refs to these names resolve to the mapped SchemaDefinition instead
+  private var aliasSchemaDefs: Map[String, SchemaDefinition] = Map.empty
+
   def resolveNamedSchemas(
       schemas: Map[String, Schema[?]]
   ): NamedSchemaDefinitions = {
-    val schemaDefs = schemas.flatMap { case (schemaKey, schema) =>
-      val schemaDef = resolveSchema(schema, schemaKey)
-      schemaDef match {
-        case obj: SchemaDefinition.Obj           => Some(SchemaDefinition.Named(schemaKey, obj))
-        case enm: SchemaDefinition.Enum          => Some(SchemaDefinition.Named(schemaKey, enm))
-        case enmL: SchemaDefinition.EnumLiterals => Some(SchemaDefinition.Named(schemaKey, enmL))
-        case const: SchemaDefinition.Const       => Some(SchemaDefinition.Named(schemaKey, const))
-        case mapObj: SchemaDefinition.MapObj     => Some(SchemaDefinition.Named(schemaKey, mapObj))
-        case arr: SchemaDefinition.Arr           => Some(SchemaDefinition.Named(schemaKey, arr))
-        case oneOf: SchemaDefinition.OneOf       => Some(SchemaDefinition.Named(schemaKey, oneOf))
-        case anyOf: SchemaDefinition.AnyOf       => Some(SchemaDefinition.Named(schemaKey, anyOf))
-        case allOf: SchemaDefinition.AllOf       => Some(SchemaDefinition.Named(schemaKey, allOf))
-        case other =>
-          println(
-            s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!!"
-          )
-          None
+    aliasSchemaDefs = Map.empty
+
+    // Phase A: resolve every named schema to a SchemaDefinition (memoized, cycle-guarded).
+    val namedDefsMemo = scala.collection.mutable.Map.empty[String, SchemaDefinition]
+    val inProgress = scala.collection.mutable.Set.empty[String]
+    def resolveNamed(name: String): SchemaDefinition =
+      namedDefsMemo.getOrElseUpdate(
+        name, {
+          if (inProgress.contains(name)) {
+            println(s"Circular named schema reference at '${name}'. Returning Unknown schema.")
+            SchemaDefinition.Unknown()
+          } else {
+            schemas.get(name) match {
+              case None => SchemaDefinition.Ref(name)
+              case Some(rawSchema) =>
+                inProgress += name
+                try resolveSchema(rawSchema, name)
+                finally inProgress -= name
+            }
+          }
+        }
+      )
+
+    val namedDefs = schemas.keysIterator.map(k => k -> resolveNamed(k)).toMap
+
+    // Phase B: classify named schemas into generatable models vs aliases.
+    // All nameable kinds are models; everything else (plain aliases, Opt wrappers,
+    // named arrays, Unknown, Ref chains) is an alias: $refs to it resolve to the
+    // underlying SchemaDefinition instead of a dangling type name.
+    def isModel(def0: SchemaDefinition): Boolean = def0 match {
+      case _: SchemaDefinition.Obj          => true
+      case _: SchemaDefinition.Enum         => true
+      case _: SchemaDefinition.EnumLiterals => true
+      case _: SchemaDefinition.Const        => true
+      case _: SchemaDefinition.MapObj       => true
+      case _: SchemaDefinition.OneOf        => true
+      case _: SchemaDefinition.AnyOf        => true
+      case _: SchemaDefinition.AllOf        => true
+      case _                                => false
+    }
+
+    def resolveAliasChain(name: String, seen: Set[String] = Set.empty): SchemaDefinition =
+      namedDefs.get(name) match {
+        case Some(SchemaDefinition.Ref(r)) if schemas.contains(r) && !seen.contains(r) =>
+          resolveAliasChain(r, seen + name)
+        case Some(SchemaDefinition.Ref(r)) if seen.contains(r) =>
+          println(s"Circular alias reference at '${name}'. Returning Unknown schema.")
+          SchemaDefinition.Unknown()
+        case Some(SchemaDefinition.Ref(r)) => SchemaDefinition.Ref(r)
+        case Some(other)                   => other
+        case None                          => SchemaDefinition.Ref(name)
       }
-    }.toList
+
+    aliasSchemaDefs = namedDefs.keysIterator.flatMap { name =>
+      val def0 = namedDefs(name)
+      if (isModel(def0)) None
+      else Some(name -> resolveAliasChain(name))
+    }.toMap
+
+    // Phase C: emit Named defs for generatable models, with alias refs normalized.
+    val schemaDefs = namedDefs.toList.flatMap { case (schemaKey, schemaDef) =>
+      if (isModel(schemaDef)) {
+        normalize(schemaDef) match {
+          case obj: SchemaDefinition.Obj          => Some(SchemaDefinition.Named(schemaKey, obj))
+          case enm: SchemaDefinition.Enum         => Some(SchemaDefinition.Named(schemaKey, enm))
+          case enmL: SchemaDefinition.EnumLiterals => Some(SchemaDefinition.Named(schemaKey, enmL))
+          case const: SchemaDefinition.Const      => Some(SchemaDefinition.Named(schemaKey, const))
+          case mapObj: SchemaDefinition.MapObj    => Some(SchemaDefinition.Named(schemaKey, mapObj))
+          case oneOf: SchemaDefinition.OneOf      => Some(SchemaDefinition.Named(schemaKey, oneOf))
+          case anyOf: SchemaDefinition.AnyOf      => Some(SchemaDefinition.Named(schemaKey, anyOf))
+          case allOf: SchemaDefinition.AllOf      => Some(SchemaDefinition.Named(schemaKey, allOf))
+          case other =>
+            println(
+              s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!!"
+            )
+            None
+        }
+      } else {
+        println(
+          s"Unsupported named schema at ${schemaKey} [${schemaDef}]. Skipping the model. This may cause cascading failures!!!"
+        )
+        None
+      }
+    }
     NamedSchemaDefinitions(schemaDefs)
+  }
+
+  /** Replaces Ref(name) with the aliased SchemaDefinition when 'name' is a non-generatable named schema. */
+  def normalize(schemaDef: SchemaDefinition): SchemaDefinition =
+    normalize(schemaDef, Set.empty)
+
+  private def normalize(schemaDef: SchemaDefinition, seenAliases: Set[String]): SchemaDefinition = schemaDef match {
+    case SchemaDefinition.Opt(inner) =>
+      SchemaDefinition.Opt(normalize(inner, seenAliases))
+    case SchemaDefinition.Arr(inner, minItems, maxItems, uniqueItems) =>
+      SchemaDefinition.Arr(normalize(inner, seenAliases), minItems, maxItems, uniqueItems)
+    case SchemaDefinition.OneOf(schemas, discriminatorPropertyName) =>
+      SchemaDefinition.OneOf(schemas.map(normalize(_, seenAliases)), discriminatorPropertyName)
+    case SchemaDefinition.AnyOf(schemas) =>
+      SchemaDefinition.AnyOf(schemas.map(normalize(_, seenAliases)))
+    case SchemaDefinition.AllOf(schemas) =>
+      SchemaDefinition.AllOf(schemas.map(normalize(_, seenAliases)))
+    case SchemaDefinition.MapObj(valueSchema) =>
+      SchemaDefinition.MapObj(valueSchema.map(normalize(_, seenAliases)))
+    case SchemaDefinition.Obj(properties) =>
+      SchemaDefinition.Obj(properties.map(p => p.copy(schema = normalize(p.schema, seenAliases))))
+    case SchemaDefinition.Ref(name) =>
+      aliasSchemaDefs.get(name) match {
+        case Some(_) if seenAliases.contains(name) =>
+          println(s"Circular alias reference at '${name}'. Returning Unknown schema.")
+          SchemaDefinition.Unknown()
+        case Some(aliasDef) =>
+          normalize(aliasDef, seenAliases + name)
+        case None =>
+          schemaDef
+      }
+    case other => other
   }
 
   def resolveSchema(schema: Schema[?], context: String): SchemaDefinition = {
@@ -96,8 +197,8 @@ class SchemaDefinitionResolver {
               .orElse {
                 Option(schema.get$ref)
                   .map { refName =>
-                    val refTpeName = refName.split("/").last
-                    SchemaDefinition.Ref(refTpeName)
+                    val tpeName = refName.split("/").last
+                    aliasSchemaDefs.get(tpeName).getOrElse(SchemaDefinition.Ref(tpeName))
                   }
               }
               .getOrElse {
@@ -108,8 +209,8 @@ class SchemaDefinitionResolver {
       case _ =>
         Option(schema.get$ref)
           .map { refName =>
-            val refTpeName = refName.split("/").last
-            SchemaDefinition.Ref(refTpeName)
+            val tpeName = refName.split("/").last
+            aliasSchemaDefs.get(tpeName).getOrElse(SchemaDefinition.Ref(tpeName))
           }
           .getOrElse {
             println(s"Unknown type at ${context} (${schema.getClass})")
@@ -129,9 +230,8 @@ class SchemaDefinitionResolver {
     val format = Option(schema.getFormat)
     Option(schema.getEnum) match {
       case Some(enumSchema) =>
-        val values = enumSchema.asScala.toList.flatMap(v => Option(v).map(_.toString))
-        if (values.isEmpty) SchemaDefinition.Str(defaultValue, None, None, None)
-        else SchemaDefinition.Enum(values, defaultValue)
+        val values = enumSchema.asScala.toList.map(_.toString)
+        SchemaDefinition.Enum(values, defaultValue)
       case None =>
         val minLength = Option(schema.getMinLength).map(_.intValue)
         val maxLength = Option(schema.getMaxLength).map(_.intValue)

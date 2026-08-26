@@ -1,0 +1,25 @@
+openapi: 3.0.1
+info: {title: t, version: "1"}
+paths: {}
+components:
+  schemas:
+    Rule:
+      oneOf:
+        - $ref: '#/components/schemas/A'
+        - $ref: '#/components/schemas/B'
+    OrgRule:
+      oneOf:
+        - $ref: '#/components/schemas/A'
+    A:
+      type: object
+      properties:
+        x: {type: string}
+    B:
+      type: object
+      properties:
+        y: {type: string}
+    Holder:
+      type: object
+      properties:
+        orgRule:
+          $ref: '#/components/schemas/OrgRule'

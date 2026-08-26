@@ -1,0 +1,14 @@
+openapi: 3.0.1
+info: {title: t, version: "1"}
+paths: {}
+components:
+  schemas:
+    InsecureSsl:
+      oneOf:
+        - type: string
+        - type: number
+    Config:
+      type: object
+      properties:
+        ssl:
+          $ref: '#/components/schemas/InsecureSsl'

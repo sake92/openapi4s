@@ -81,7 +81,7 @@ class PathDefinitionsResolverSuite extends munit.FunSuite {
           )
         ),
         reqBody = None,
-        resBody = Some(value = ResBodyDefinition(schema = Ref(name = "Pets"))),
+        resBody = Some(value = ResBodyDefinition(schema = Arr(Ref("Pet"), None, Some(100), false))),
         tags = List("pets"),
         summary = "List all pets",
         description = "",

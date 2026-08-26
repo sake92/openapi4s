@@ -1,0 +1,11 @@
+openapi: 3.0.1
+info: {title: t, version: "1"}
+paths:
+  /hello:
+    get:
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              example: {foo: bar}

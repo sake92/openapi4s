@@ -1,0 +1,13 @@
+openapi: 3.0.1
+info: {title: t, version: "1"}
+paths: {}
+components:
+  schemas:
+    TagList:
+      type: array
+      items: {type: string}
+    Holder:
+      type: object
+      properties:
+        tags:
+          $ref: '#/components/schemas/TagList'
