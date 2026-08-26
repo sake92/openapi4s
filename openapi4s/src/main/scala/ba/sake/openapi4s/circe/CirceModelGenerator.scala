@@ -166,13 +166,16 @@ class CirceModelGenerator(
           q"""
             object ${termName} {
               given Configuration =  Configuration.default.withDiscriminator(${Lit.String(
-              oneOfSchema.discriminatorPropertyName
+              oneOfSchema.discriminatorPropertyName.getOrElse("@type")
             )})
               given Codec[${typeName}] = ConfiguredCodec.derived
               ..${oneOfCases}
             }
           """
         )
+      case other =>
+        println(s"Unsupported named schema type for circe: '${other.getClass.getSimpleName}' [${namedSchemaName}]")
+        List.empty
     }
     generatedNamedSchemas += namedSchemaName
     generatedModelSources

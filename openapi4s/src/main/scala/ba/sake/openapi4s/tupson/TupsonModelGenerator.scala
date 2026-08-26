@@ -126,7 +126,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
         }
         List(
           q"""
-          @discriminator(${Lit.String(oneOfSchema.discriminatorPropertyName)})
+          @discriminator(${Lit.String(oneOfSchema.discriminatorPropertyName.getOrElse("@type"))})
           sealed trait ${typeName} derives JsonRW
           """,
           q"""  object ${termName} { ..${oneOfCases} } """
@@ -151,6 +151,9 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
           SchemaDefinition.Named(namedSchemaName, SchemaDefinition.Obj(mergedSchemasProps)),
           superType
         )
+      case other =>
+        println(s"Unsupported named schema type for tupson: '${other.getClass.getSimpleName}' [${namedSchemaName}]")
+        List.empty
     }
     generatedNamedSchemas += namedSchemaName
     generatedModelSources

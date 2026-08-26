@@ -178,10 +178,7 @@ class SchemaDefinitionResolver {
   private def getOneOfSchema(schema: Schema[?], context: String): SchemaDefinition.OneOf = {
     val schemas =
       Option(schema.getOneOf).map(_.asScala).getOrElse(List.empty).map(s => resolveSchema(s, context)).toList
-    val discriminatorPropertyName = Option(schema.getDiscriminator).map(_.getPropertyName).getOrElse {
-      println(s"The oneOf schema does not have a discriminator property [${context}]. Using '@type' as default")
-      "@type"
-    }
+    val discriminatorPropertyName = Option(schema.getDiscriminator).map(_.getPropertyName)
     SchemaDefinition.OneOf(schemas, discriminatorPropertyName = discriminatorPropertyName)
   }
 
