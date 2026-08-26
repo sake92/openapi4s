@@ -1,10 +1,14 @@
 package ba.sake.openapi4s
 
 import java.nio.file.{Files, Path}
+import java.util.concurrent.TimeUnit
 import scala.jdk.CollectionConverters._
 
 /** Compiles generated Scala 3 sources with scala-cli (external tool, Scala 3 compiler). */
 object CompilationTestUtils {
+
+  private val CompileTimeoutMinutes = 60L
+  private val LogPreviewChars = 4000
 
   /** Compiles all .scala files under `base` with scala-cli. Fails the assertion on non-zero exit. */
   def compileGenerated(base: Path, scalaVersion: String, dependencies: Seq[String]): Unit = {
@@ -19,7 +23,7 @@ object CompilationTestUtils {
     val (exitCode, output) = runProcess(scalaCliBin, args)
     assert(
       exitCode == 0,
-      s"Generated sources failed to compile (scala-cli exit code $exitCode):\n$output"
+      s"Generated sources failed to compile (scala-cli exit code $exitCode):\n${preview(output)}"
     )
   }
 
@@ -46,8 +50,19 @@ object CompilationTestUtils {
       builder.redirectErrorStream(true)
       builder.redirectOutput(outFile.toFile)
       val process = builder.start()
-      val exitCode = process.waitFor()
-      (exitCode, Files.readString(outFile))
+      val finished = process.waitFor(CompileTimeoutMinutes, TimeUnit.MINUTES)
+      if (!finished) {
+        process.destroyForcibly()
+        (1, s"scala-cli compile timed out after ${CompileTimeoutMinutes} minutes")
+      } else {
+        (process.exitValue(), Files.readString(outFile))
+      }
     } finally Files.deleteIfExists(outFile)
+  }
+
+  /** Keeps the assertion message bounded even when dotc emits megabytes of errors. */
+  private def preview(output: String): String = {
+    if (output.length <= LogPreviewChars) output
+    else output.take(LogPreviewChars / 2) + "\n... [truncated] ...\n" + output.takeRight(LogPreviewChars / 2)
   }
 }

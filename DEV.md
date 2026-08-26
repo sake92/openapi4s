@@ -4,6 +4,10 @@ TODOs:
 - add more tests https://github.com/swagger-api/swagger-parser/blob/master/modules/swagger-parser-v3/src/test/resources
 - on release: bump README "Requirements" (Scala 3.7+, tupson >= 0.20.0)
 
+NOTE: `./mill __.test` requires `scala-cli` on PATH (used by the compilation suites
+to compile generated sources: `IronValidationCompilationSuite`,
+`GithubJiraCompilationSuite`). Override the binary with `SCALA_CLI_BIN` if needed.
+
 
 ```sh
 
