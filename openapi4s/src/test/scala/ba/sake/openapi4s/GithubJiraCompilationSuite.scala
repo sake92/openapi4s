@@ -37,6 +37,11 @@ class GithubJiraCompilationSuite extends munit.FunSuite {
       framework = "none"
     )
     OpenApiWriter(config).write()
+    // tupson has no JsonRW[LocalDate]; provide it in the test (see CompilationTestUtils)
+    CompilationTestUtils.writeLocalDateJsonRW(
+      baseFolder.resolve(basePackage.replace('.', '/')).resolve("models"),
+      basePackage
+    )
     baseFolder
   }
 }

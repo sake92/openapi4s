@@ -43,6 +43,28 @@ object CompilationTestUtils {
     }
   }
 
+  /** tupson has no JsonRW[LocalDate]; generated models with date fields need this instance to compile. */
+  def writeLocalDateJsonRW(modelsDir: Path, basePackage: String): Unit = {
+    val content =
+      s"""package ${basePackage}.models
+         |
+         |import java.time.LocalDate
+         |import org.typelevel.jawn.ast.{JString, JValue}
+         |import ba.sake.tupson.*
+         |
+         |given JsonRW[LocalDate] with {
+         |  override def write(value: LocalDate): JValue = JString(value.toString)
+         |  override def parse(path: String, jValue: JValue): LocalDate = jValue match
+         |    case JString(s) => LocalDate.parse(s)
+         |    case other =>
+         |      throw ParsingException(
+         |        ParseError(path, "should be a date string", Some(other.render().take(100)))
+         |      )
+         |}
+         |""".stripMargin
+    Files.writeString(modelsDir.resolve("LocalDateJsonRW.scala"), content)
+  }
+
   private def runProcess(bin: String, args: List[String]): (Int, String) = {
     val outFile = Files.createTempFile("openapi4s-scalacli", ".log")
     try {

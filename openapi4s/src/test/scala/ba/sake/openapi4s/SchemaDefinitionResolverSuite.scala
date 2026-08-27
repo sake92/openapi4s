@@ -169,6 +169,8 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
       named("Marker"),
       Named("Marker", Const(StrValue("abc"), None))
     )
+  }
+
   test("resolveSchema(null) returns Unknown instead of NPE") {
     val resolver = new SchemaDefinitionResolver()
     assertEquals(resolver.resolveSchema(null, "ctx"), SchemaDefinition.Unknown())
@@ -216,24 +218,29 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
     assertEquals(holder, SchemaDefinition.Named("Holder", Obj(List(SchemaProperty("tags", Opt(Arr(Str(None, None, None, None), None, None, false)))))))
   }
 
-  test("oneOf with inline members is not generated, $refs fall back to Unknown") {
+  test("oneOf with inline members is generated as a model, $refs stay Ref") {
     val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("oneof_inline.yaml"))
     assertEquals(
       openApiDefinition.namedSchemaDefinitions.defs.map(_.name),
-      Seq("Config")
+      Seq("InsecureSsl", "Config")
     )
     assertEquals(
-      openApiDefinition.namedSchemaDefinitions.defs.head,
-      SchemaDefinition.Named("Config", Obj(List(SchemaProperty("ssl", Opt(Unknown())))))
+      openApiDefinition.namedSchemaDefinitions.defs.find(_.name == "Config").get,
+      SchemaDefinition.Named("Config", Obj(List(SchemaProperty("ssl", Opt(Ref("InsecureSsl"))))))
     )
   }
 
-  test("oneOf whose members are a subset of another oneOf aliases to the superset") {
+  test("oneOf whose members are a subset of another oneOf still generates its own model") {
     val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("oneof_subset.yaml"))
     val holder = openApiDefinition.namedSchemaDefinitions.defs.find(_.name == "Holder").get
     assertEquals(
       holder,
-      SchemaDefinition.Named("Holder", Obj(List(SchemaProperty("orgRule", Opt(Ref("Rule"))))))
+      SchemaDefinition.Named("Holder", Obj(List(SchemaProperty("orgRule", Opt(Ref("OrgRule"))))))
+    )
+    // both oneOfs are generated as models (union type aliases)
+    assertEquals(
+      openApiDefinition.namedSchemaDefinitions.defs.map(_.name).filter(_.contains("Rule")),
+      Seq("Rule", "OrgRule")
     )
   }
 
