@@ -109,22 +109,31 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     OpenApiWriter(config).write()
     val generatedFiles = listScalaFiles(baseFolder.resolve("pkg"))
     assert(generatedFiles.nonEmpty)
-    assert(generatedFiles.exists(_.startsWith("models/Newtypes.scala")),
-      s"Expected models/Newtypes.scala in: ${generatedFiles.mkString(", ")}")
-    assert(generatedFiles.exists(gf => gf.startsWith("models/") && !gf.contains("Newtypes")),
-      "Expected at least one model file besides Newtypes.scala")
+    assert(
+      generatedFiles.exists(_.startsWith("models/Newtypes.scala")),
+      s"Expected models/Newtypes.scala in: ${generatedFiles.mkString(", ")}"
+    )
+    assert(
+      generatedFiles.exists(gf => gf.startsWith("models/") && !gf.contains("Newtypes")),
+      "Expected at least one model file besides Newtypes.scala"
+    )
 
     val newtypesFile = readGeneratedFile(baseFolder.resolve("pkg"), "models/Newtypes.scala")
-    assert(newtypesFile.contains("import io.github.iltotore.iron.*"),
-      "Newtypes.scala should import io.github.iltotore.iron.*")
-    assert(newtypesFile.contains("import io.github.iltotore.iron.constraint.all.*"),
-      "Newtypes.scala should import iron constraints")
-    assert(newtypesFile.contains("extends io.github.iltotore.iron.RefinedType"),
-      "Newtypes.scala should contain RefinedType definitions")
+    assert(
+      newtypesFile.contains("import io.github.iltotore.iron.*"),
+      "Newtypes.scala should import io.github.iltotore.iron.*"
+    )
+    assert(
+      newtypesFile.contains("import io.github.iltotore.iron.constraint.all.*"),
+      "Newtypes.scala should import iron constraints"
+    )
+    assert(
+      newtypesFile.contains("extends io.github.iltotore.iron.RefinedType"),
+      "Newtypes.scala should contain RefinedType definitions"
+    )
 
     val petFile = readGeneratedFile(baseFolder.resolve("pkg"), "models/Pet.scala")
-    assert(petFile.contains("import io.github.iltotore.iron.circe.given"),
-      "Pet.scala should import iron circe given")
+    assert(petFile.contains("import io.github.iltotore.iron.circe.given"), "Pet.scala should import iron circe given")
     printGeneratedSources(baseFolder.resolve("pkg"))
   }
 

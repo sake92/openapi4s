@@ -24,6 +24,11 @@ The **tupson** models backend generates code that needs:
 - **Scala 3.7+** in your project
 - **tupson >= 0.20.0** dependency (`ivy"ba.sake::tupson:0.20.0"`)
 
+The **sttp client** backend generates code that needs:
+
+- **sttp client4** dependency (`ivy"com.softwaremill.sttp.client4::core:4.0.26"`)
+- for circe models: additionally `ivy"com.softwaremill.sttp.client4::circe:4.0.26"`
+
 ---
 
 ## Generators
@@ -59,6 +64,25 @@ Supports some features:
 
 TODO: query params, validation..  
 Contributions welcome!
+
+### Sttp client backend
+Generates [sttp client4](https://sttp.softwaremill.com/) HTTP clients — one `XClient` class per tag, e.g. `PetClient`:
+
+```scala
+class PetClient(baseUrl: String) {
+  def getPetById(petId: Long): Request[Either[ResponseException[String], Pet]] =
+    basicRequest.get(uri"$baseUrl/pet/$petId").response(asJson[Pet])
+}
+```
+
+Supports:
+- path, query and header params
+- JSON request/response bodies (`application/json`)
+- spec `servers` exposed as `server1`, `server2`, ... constants in the client companion
+- combining with both model backends: `--models circe --client sttp` and `--models tupson --client sttp`
+- selective generation with `--tags Pet,Store` (currently applies only to clients)
+
+Not yet supported: auth/security schemes, multipart, streaming, non-JSON content types.
 
 ---
 
@@ -130,4 +154,17 @@ You can now combine model and framework generation independently:
 
 # framework only (expects existing com.example.models)
 --models none --framework http4s
+```
+
+Clients can be generated alongside (or instead of) server code, optionally restricted to some tags:
+
+```shell
+# tupson models + sttp client for all tags
+--models tupson --framework none --client sttp
+
+# circe models + sttp client, only for tags Pet and Store (applies to clients only)
+--models circe --framework none --client sttp --tags Pet,Store
+
+# models + sharaf server + sttp client in one run
+--models tupson --framework sharaf --client sttp
 ```

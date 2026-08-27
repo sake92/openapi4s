@@ -36,9 +36,8 @@ class OpenApiWriter(
     }
     val clientSources = clientBackend.generator(config, clientDefinition, modelContract).generate()
     val packagePath = config.basePackage.replaceAll("\\.", "/")
-    val adaptedGenSourceFiles = (validationSources ++ modelSources ++ frameworkSources ++ clientSources).map {
-      gsf =>
-        gsf.copy(file = config.baseFolder.resolve(packagePath).resolve(gsf.file.toString))
+    val adaptedGenSourceFiles = (validationSources ++ modelSources ++ frameworkSources ++ clientSources).map { gsf =>
+      gsf.copy(file = config.baseFolder.resolve(packagePath).resolve(gsf.file.toString))
     }
     regenescaGenerator.generate(adaptedGenSourceFiles)
     println(
@@ -59,7 +58,9 @@ object OpenApiWriter {
     val frameworkId = FrameworkBackendId.fromString(config.framework)
     val clientId = ClientBackendId.fromString(config.client)
 
-    if (modelId == ModelBackendId.NoModel && frameworkId == FrameworkBackendId.NoFramework && clientId == ClientBackendId.NoClient) {
+    if (
+      modelId == ModelBackendId.NoModel && frameworkId == FrameworkBackendId.NoFramework && clientId == ClientBackendId.NoClient
+    ) {
       throw new RuntimeException(
         "Invalid config: models=none, framework=none and client=none means nothing to generate."
       )

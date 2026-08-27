@@ -183,8 +183,7 @@ class SttpClientGenerator(
     bodyParamOpt.foreach { case (bodyParam, _) =>
       val bodyTerm = ScalaIdents.termName(bodyParam)
       if (config.models == "tupson") {
-        reqTerm =
-          q"${reqTerm}.body(${bodyTerm}.toJson).contentType(${Lit.String("application/json")})"
+        reqTerm = q"${reqTerm}.body(${bodyTerm}.toJson).contentType(${Lit.String("application/json")})"
       } else {
         // client4 has no BodySerializer overload; circe's asJson(x) builds a StringBody
         reqTerm = q"${reqTerm}.body(asJson(${bodyTerm}))"
@@ -246,9 +245,9 @@ class SttpClientGenerator(
 
   /** Derives a readable Scala param name for a request body, e.g. Ref("Pet") -> "pet" */
   private def resolveBodyParamName(schema: SchemaDefinition): String = schema match {
-    case SchemaDefinition.Ref(name)    => decapitalize(name)
+    case SchemaDefinition.Ref(name)      => decapitalize(name)
     case SchemaDefinition.Named(name, _) => decapitalize(name)
-    case _                             => "body"
+    case _                               => "body"
   }
 
   private def decapitalize(name: String): String =

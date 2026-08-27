@@ -9,7 +9,7 @@ class PathDefinitionsResolverSuite extends munit.FunSuite {
   // GET /store/inventory IS REMOVED MANUALLY ! (unsupported
   test("PathDefinitionsResolver should resolve petstore.json path definitions") {
 
-    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "petstore.json"))
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("petstore.json"))
     val pathDefinitions = openApiDefinition.pathDefinitions
 
     // pprint.pprintln(pathDefinitions)
@@ -64,7 +64,8 @@ class PathDefinitionsResolverSuite extends munit.FunSuite {
   }
 
   // https://github.com/OAI/OpenAPI-Specification/blob/3.1.1/examples/v3.0/petstore.json
-  test("PathDefinitionsResolver should resolve petstore_3.0.0.json") {    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "petstore_3.0.0.json") )
+  test("PathDefinitionsResolver should resolve petstore_3.0.0.json") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("petstore_3.0.0.json"))
     // pprint.pprintln(openApiDefinition)
     val listPetsPath = openApiDefinition.pathDefinitions.defs.find(_.operationId == "listPets").get
     assertEquals(
