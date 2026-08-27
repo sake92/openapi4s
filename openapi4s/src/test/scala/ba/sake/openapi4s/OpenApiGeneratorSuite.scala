@@ -64,7 +64,9 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
   }
 
   test("composed generator should reject none + none") {
-    interceptMessage[RuntimeException]("Invalid config: models=none and framework=none means nothing to generate.") {
+    interceptMessage[RuntimeException](
+      "Invalid config: models=none, framework=none and client=none means nothing to generate."
+    ) {
       OpenApiWriter(
         OpenApiWriter.Config(
           url = TestUtils.getResourceUrl("petstore_3.0.0.json"),
@@ -124,6 +126,64 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     assert(petFile.contains("import io.github.iltotore.iron.circe.given"),
       "Pet.scala should import iron circe given")
     printGeneratedSources(baseFolder.resolve("pkg"))
+  }
+
+  test("composed generator should support tupson + sttp client") {
+    val baseFolder = Files.createTempDirectory("openapi4s-tupson-sttp")
+    val config = OpenApiWriter.Config(
+      url = TestUtils.getResourceUrl("sttp_client.yaml"),
+      baseFolder = baseFolder,
+      basePackage = "pkg",
+      models = "tupson",
+      framework = "none",
+      client = "sttp"
+    )
+    OpenApiWriter(config).write()
+    val generatedFiles = listScalaFiles(baseFolder.resolve("pkg"))
+    assert(generatedFiles.exists(_.startsWith("models/")))
+    assert(generatedFiles.exists(_.startsWith("clients/PetClient.scala")))
+    assert(generatedFiles.exists(_.startsWith("clients/JsonSupport.scala")))
+    printGeneratedSources(baseFolder.resolve("pkg"))
+  }
+
+  test("--tags should filter only the client generation") {
+    val baseFolder = Files.createTempDirectory("openapi4s-tags-filter")
+    val config = OpenApiWriter.Config(
+      url = TestUtils.getResourceUrl("sttp_client.yaml"),
+      baseFolder = baseFolder,
+      basePackage = "pkg",
+      models = "tupson",
+      framework = "none",
+      client = "sttp",
+      tags = Some(List("Pet"))
+    )
+    OpenApiWriter(config).write()
+    val generatedFiles = listScalaFiles(baseFolder.resolve("pkg"))
+    // only Pet client is generated
+    assert(generatedFiles.exists(_.startsWith("clients/PetClient.scala")))
+    assert(!generatedFiles.exists(_.startsWith("clients/StoreClient.scala")))
+    assert(!generatedFiles.exists(_.startsWith("clients/DefaultClient.scala")))
+    // models are unaffected (all still generated)
+    val modelFiles = generatedFiles.filter(_.startsWith("models/"))
+    assert(modelFiles.nonEmpty)
+    assert(modelFiles.exists(_.endsWith("Pet.scala")))
+    assert(modelFiles.exists(_.endsWith("Order.scala")))
+    printGeneratedSources(baseFolder.resolve("pkg"))
+  }
+
+  test("composed generator should reject unknown client backend") {
+    interceptMessage[RuntimeException]("Unknown client backend 'bogus'. Available client backends: 'sttp', 'none'") {
+      OpenApiWriter(
+        OpenApiWriter.Config(
+          url = TestUtils.getResourceUrl("petstore_3.0.0.json"),
+          baseFolder = Paths.get("app"),
+          basePackage = "pkg",
+          models = "circe",
+          framework = "none",
+          client = "bogus"
+        )
+      )
+    }
   }
 
   private def listScalaFiles(base: Path): List[String] = {
