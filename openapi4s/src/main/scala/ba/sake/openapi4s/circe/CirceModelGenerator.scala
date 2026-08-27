@@ -205,6 +205,11 @@ class CirceModelGenerator(
           case other =>
             println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
             List.empty
+        }.foldLeft(List.empty[SchemaProperty]) { (acc, p) =>
+          if (acc.exists(_.name == p.name)) {
+            println(s"Duplicate property '${p.name}' after allOf merge [${namedSchemaName}]. Keeping the first occurrence.")
+            acc
+          } else acc :+ p
         }
         generateModelSources(
           SchemaDefinition.Named(namedSchemaName, SchemaDefinition.Obj(mergedSchemasProps)),

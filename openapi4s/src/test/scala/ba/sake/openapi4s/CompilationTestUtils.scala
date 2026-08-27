@@ -10,6 +10,10 @@ object CompilationTestUtils {
   private val CompileTimeoutMinutes = 60L
   private val LogPreviewChars = 4000
 
+  // generated github/jira models are huge; the scala-cli compiler JVM needs a big heap.
+  // overridable via env, e.g. OPENAPI4S_COMPILE_XMX=4g
+  private val CompileXmx = sys.env.getOrElse("OPENAPI4S_COMPILE_XMX", "6g")
+
   /** Compiles all .scala files under `base` with scala-cli. Fails the assertion on non-zero exit. */
   def compileGenerated(base: Path, scalaVersion: String, dependencies: Seq[String]): Unit = {
     val scalaFiles = listScalaFiles(base)
@@ -71,6 +75,8 @@ object CompilationTestUtils {
       val builder = new ProcessBuilder((bin :: args).asJava)
       builder.redirectErrorStream(true)
       builder.redirectOutput(outFile.toFile)
+      // the compiler JVM (spawned by scala-cli) picks this up and keeps heap off mill's test JVM
+      builder.environment().put("JDK_JAVA_OPTIONS", s"-Xmx$CompileXmx")
       val process = builder.start()
       val finished = process.waitFor(CompileTimeoutMinutes, TimeUnit.MINUTES)
       if (!finished) {

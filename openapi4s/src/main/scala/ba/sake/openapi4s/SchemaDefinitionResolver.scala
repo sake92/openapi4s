@@ -301,7 +301,12 @@ class SchemaDefinitionResolver {
         SchemaProperty(propertyKey, schema)
       }
       .toList
-      .distinct
+      .foldLeft(List.empty[SchemaProperty]) { (acc, p) =>
+        if (acc.exists(_.name == p.name)) {
+          println(s"Duplicate property '${p.name}' at ${context}. Keeping the first occurrence.")
+          acc
+        } else acc :+ p
+      }
     SchemaDefinition.Obj(properties)
   }
 

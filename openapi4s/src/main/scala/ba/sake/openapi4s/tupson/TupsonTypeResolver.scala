@@ -40,17 +40,21 @@ object TupsonTypeResolver {
 
   private val IdentifierRegex = "[A-Za-z_][A-Za-z0-9_]*".r
 
+  // named tuples with more fields blow up dotc/tupson derivation (github webhook unions)
+  private val MaxNamedTupleFields = 15
+
   private def namedTupleType(obj: SchemaDefinition.Obj, context: String, fallbackAnyType: Type): Type = {
     val invalidName = obj.properties.find(p => !IdentifierRegex.matches(p.name))
-    if (obj.properties.isEmpty || invalidName.isDefined) {
+    if (obj.properties.isEmpty || invalidName.isDefined || obj.properties.size > MaxNamedTupleFields) {
       println(
-        s"Cannot render anonymous object as named tuple (${invalidName.map(_.name).getOrElse("empty")}) [$context]. Falling back to ${fallbackAnyType.syntax}"
+        s"Cannot render anonymous object as named tuple (${invalidName.map(_.name).getOrElse(s"${obj.properties.size} fields")}) [$context]. Falling back to ${fallbackAnyType.syntax}"
       )
       fallbackAnyType
     } else {
       val typedParams = obj.properties.map { p =>
         Type.TypedParam(
-          Type.Name(p.name),
+          // TypedParam names are not auto-backticked by the syntax printer, so sanitize explicitly
+          Type.Name(ScalaIdents.sanitize(p.name)),
           resolveType(p.schema, Some(p.name), None, allowNullable = true, s"$context.${p.name}", fallbackAnyType),
           Nil
         )
