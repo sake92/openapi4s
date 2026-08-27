@@ -25,9 +25,12 @@ class SttpClientGenerator(
 
   override def generate(): Seq[GeneratedFileSource] = {
     val groupedByTag = openApiDefinition.pathDefinitions.defs.groupBy(_.getTag)
-    groupedByTag.flatMap { case (tag, pathDefinitions) =>
+    val clientSources = groupedByTag.flatMap { case (tag, pathDefinitions) =>
       generateClientSources(tag, pathDefinitions)
     }.toList
+    val jsonSupportSources =
+      if (config.models == "tupson") generateJsonSupportSource() else List.empty
+    clientSources ++ jsonSupportSources
   }
 
   private def generateClientSources(
@@ -65,11 +68,44 @@ class SttpClientGenerator(
   }
 
   private def generateImports(): List[Import] = {
-    val jsonImports =
-      if (config.models == "tupson") List.empty
-      else List(q"import sttp.client4.circe.*")
-    List(q"import sttp.client4.*") ++ jsonImports ++ List(
-      GenerationImports.modelWildcardImport(config.basePackage)
+    if (config.models == "tupson") {
+      val jsonSupportImporter = s"${config.basePackage}.clients.JsonSupport.*".parse[Importer].get
+      List(
+        q"import sttp.client4.*",
+        q"import ba.sake.tupson.{given, *}",
+        q"import ..${List(jsonSupportImporter)}",
+        GenerationImports.modelWildcardImport(config.basePackage)
+      )
+    } else {
+      List(
+        q"import sttp.client4.*",
+        q"import sttp.client4.circe.*",
+        GenerationImports.modelWildcardImport(config.basePackage)
+      )
+    }
+  }
+
+  /** sttp has no tupson module on Maven Central, so JSON (de)serialization goes through a small generated helper
+    * wrapping tupson's `parseJson`/`toJson`.
+    */
+  private def generateJsonSupportSource(): List[GeneratedFileSource] = {
+    val pkg = generatePkgSelect(s"${config.basePackage}.clients")
+    List(
+      GeneratedFileSource(
+        Paths.get("clients/JsonSupport.scala"),
+        source"""
+        // generated with OpenApi4s
+        package ${pkg} {
+            import ba.sake.tupson.{given, *}
+            import sttp.client4.*
+
+            object JsonSupport {
+                def asJson[T: JsonRW]: ResponseAs[Either[ResponseException[String], T]] =
+                    asString.mapWithMetadata(ResponseAs.deserializeRightCatchingExceptions(_.parseJson[T]))
+            }
+        }
+        """
+      )
     )
   }
 
@@ -115,13 +151,43 @@ class SttpClientGenerator(
         params += param"${ScalaIdents.termName(hp.name)}: ${finalTpe}"
       }
     }
+    // request body param
+    val bodyParamOpt: Option[(String, Type)] = pathDef.reqBody.flatMap { body =>
+      try {
+        val tpe = SchemaUtils.resolveType(
+          body.schema,
+          None,
+          None,
+          allowNullable = true,
+          s"${pathDef.method} '${pathDef.path}' req body",
+          fallbackAnyType = t"String"
+        )
+        Some((resolveBodyParamName(body.schema), tpe))
+      } catch {
+        case e: UnsupportedSchemaException =>
+          println(e.toString)
+          None
+      }
+    }
+    bodyParamOpt.foreach { case (bodyParam, tpe) =>
+      params += param"${ScalaIdents.termName(bodyParam)}: ${tpe}"
+    }
 
-    // build request: basicRequest.get(uri"...").header(...)...response(...)
+    // build request: basicRequest.get(uri"...").header(...)...body(...)...response(...)
     val uriTerm = buildUriTerm(pathDef)
     val httpMethod = Term.Name(pathDef.method.toLowerCase)
     var reqTerm: Term = Term.Apply(Term.Select(Term.Name("basicRequest"), httpMethod), List(uriTerm))
     pathDef.headerParams.filter(_.required).foreach { hp =>
       reqTerm = q"${reqTerm}.header(${Lit.String(hp.name)}, ${ScalaIdents.termName(hp.name)})"
+    }
+    bodyParamOpt.foreach { case (bodyParam, _) =>
+      val bodyTerm = ScalaIdents.termName(bodyParam)
+      if (config.models == "tupson") {
+        reqTerm =
+          q"${reqTerm}.body(${bodyTerm}.toJson).contentType(${Lit.String("application/json")})"
+      } else {
+        reqTerm = q"${reqTerm}.body(${bodyTerm})"
+      }
     }
     reqTerm = q"${reqTerm}.response(${responseAsExpr(pathDef)})"
 
@@ -175,6 +241,16 @@ class SttpClientGenerator(
       case None => t"Unit"
     }
   }
+
+  /** Derives a readable Scala param name for a request body, e.g. Ref("Pet") -> "pet" */
+  private def resolveBodyParamName(schema: SchemaDefinition): String = schema match {
+    case SchemaDefinition.Ref(name)    => decapitalize(name)
+    case SchemaDefinition.Named(name, _) => decapitalize(name)
+    case _                             => "body"
+  }
+
+  private def decapitalize(name: String): String =
+    if (name.isEmpty) "body" else name.head.toLower + name.tail
 
   /** Resolves a param schema to a Scala type. Unsupported schemas (e.g. inline enums) fall back to String, never
     * failing generation.
