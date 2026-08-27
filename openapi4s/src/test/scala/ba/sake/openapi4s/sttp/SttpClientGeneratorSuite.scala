@@ -89,7 +89,7 @@ class SttpClientGeneratorSuite extends munit.FunSuite {
         "def healthCheck(): Request[Either[ResponseException[String], Unit]] = {"
       )
     )
-    assert(defaultClientSrc.contains("asString.map(_.map(_ => ()))"))
+    assert(defaultClientSrc.contains("asString.mapWithMetadata(ResponseAs.deserializeRightCatchingExceptions(_ => ()))"))
   }
 
   test("generate() should handle JSON request/response bodies (circe)") {
@@ -101,7 +101,7 @@ class SttpClientGeneratorSuite extends munit.FunSuite {
       )
     )
     assert(petClientSrc.contains("basicRequest.post(uri\"$baseUrl/pet\")"))
-    assert(petClientSrc.contains(".body(pet)"))
+    assert(petClientSrc.contains(".body(asJson(pet))"))
     assert(petClientSrc.contains(".response(asJson[Pet])"))
   }
 

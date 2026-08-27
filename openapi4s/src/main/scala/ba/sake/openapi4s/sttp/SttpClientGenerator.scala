@@ -186,7 +186,8 @@ class SttpClientGenerator(
         reqTerm =
           q"${reqTerm}.body(${bodyTerm}.toJson).contentType(${Lit.String("application/json")})"
       } else {
-        reqTerm = q"${reqTerm}.body(${bodyTerm})"
+        // client4 has no BodySerializer overload; circe's asJson(x) builds a StringBody
+        reqTerm = q"${reqTerm}.body(asJson(${bodyTerm}))"
       }
     }
     reqTerm = q"${reqTerm}.response(${responseAsExpr(pathDef)})"
@@ -211,12 +212,13 @@ class SttpClientGenerator(
     if (config.models == "tupson") {
       pathDef.resBody match {
         case Some(body) => q"JsonSupport.asJson[${responseType(pathDef)}]"
-        case None       => q"asString.map(_.map(_ => ${Lit.Unit()}))"
+        // plain asString errors on String, so map through ResponseException explicitly
+        case None => q"asString.mapWithMetadata(ResponseAs.deserializeRightCatchingExceptions(_ => ${Lit.Unit()}))"
       }
     } else {
       pathDef.resBody match {
         case Some(_) => q"asJson[${responseType(pathDef)}]"
-        case None    => q"asString.map(_.map(_ => ${Lit.Unit()}))"
+        case None    => q"asString.mapWithMetadata(ResponseAs.deserializeRightCatchingExceptions(_ => ${Lit.Unit()}))"
       }
     }
   }
