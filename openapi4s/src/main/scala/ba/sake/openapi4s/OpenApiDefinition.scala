@@ -5,7 +5,8 @@ import io.swagger.parser.OpenAPIParser
 
 case class OpenApiDefinition(
     namedSchemaDefinitions: NamedSchemaDefinitions,
-    pathDefinitions: PathDefinitions
+    pathDefinitions: PathDefinitions,
+    servers: List[String] = List.empty
 ) {
   // make OneOf-s come first!
   def normalized: OpenApiDefinition = {
@@ -47,7 +48,10 @@ object OpenApiDefinition {
       }
       val pathsResolver = new PathDefinitionsResolver(schemaDefinitionResolver)
       val pathDefinitions = pathsResolver.resolve(openApi.getPaths)
-      OpenApiDefinition(namedSchemaDefinitions, pathDefinitions).normalized
+      val servers = Option(openApi.getServers)
+        .map(_.asScala.toList.flatMap(server => Option(server.getUrl)))
+        .getOrElse(List.empty)
+      OpenApiDefinition(namedSchemaDefinitions, pathDefinitions, servers).normalized
     }
   }
 }

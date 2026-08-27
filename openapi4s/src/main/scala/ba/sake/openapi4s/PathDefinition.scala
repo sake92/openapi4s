@@ -9,6 +9,7 @@ case class PathDefinition(
     path: String,
     pathSegments: List[PathSegment],
     queryParams: List[QueryParam],
+    headerParams: List[HeaderParam],
     reqBody: Option[ReqBodyDefinition],
     resBody: Option[ResBodyDefinition],
     tags: List[String],
@@ -27,6 +28,8 @@ object PathSegment {
 }
 
 case class QueryParam(name: String, schema: SchemaDefinition, required: Boolean)
+
+case class HeaderParam(name: String, schema: SchemaDefinition, required: Boolean)
 
 case class ReqBodyDefinition(schema: SchemaDefinition, required: Boolean)
 
