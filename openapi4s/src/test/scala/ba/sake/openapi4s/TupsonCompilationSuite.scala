@@ -9,6 +9,10 @@ import scala.jdk.CollectionConverters._
  */
 class TupsonCompilationSuite extends munit.FunSuite {
 
+  // dotc compilation is slow, especially when run in parallel with other test classes
+  override def munitTimeout: scala.concurrent.duration.Duration =
+    scala.concurrent.duration.Duration(120, "s")
+
   test("generated tupson sources compile (3.0 features)") {
     val baseFolder = generate("tupson_features.yaml", "com.example.features")
     compileGenerated(baseFolder.resolve("com/example/features"))

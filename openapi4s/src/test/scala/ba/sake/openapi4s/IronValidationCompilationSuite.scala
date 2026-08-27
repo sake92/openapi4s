@@ -6,6 +6,10 @@ import scala.jdk.CollectionConverters._
 /** Compiles generated Scala 3 sources with the Scala 3 compiler to make sure they are valid. */
 class IronValidationCompilationSuite extends munit.FunSuite {
 
+  // dotc compilation is slow, especially when run in parallel with other test classes
+  override def munitTimeout: scala.concurrent.duration.Duration =
+    scala.concurrent.duration.Duration(120, "s")
+
   test("generated circe + iron sources compile") {
     val baseFolder = generate(
       url = "iron_constraints.json",
