@@ -32,6 +32,10 @@ object cli extends SbtModule with Openapi4sPublishModule {
     mvn"com.lihaoyi::mainargs:0.7.6"
   )
   def mainClass = Some("ba.sake.openapi4s.cli.OpenApi4sMain")
+
+  object test extends SbtTests with TestModule.Munit {
+    def mvnDeps = Seq(mvn"org.scalameta::munit::1.0.2")
+  }
 }
 
 trait Openapi4sPublishModule extends PublishModule {
