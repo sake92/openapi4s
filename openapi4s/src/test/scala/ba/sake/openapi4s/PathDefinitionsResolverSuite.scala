@@ -9,7 +9,7 @@ class PathDefinitionsResolverSuite extends munit.FunSuite {
   // GET /store/inventory IS REMOVED MANUALLY ! (unsupported
   test("PathDefinitionsResolver should resolve petstore.json path definitions") {
 
-    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "petstore.json"))
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("petstore.json"))
     val pathDefinitions = openApiDefinition.pathDefinitions
 
     // pprint.pprintln(pathDefinitions)
@@ -52,6 +52,7 @@ class PathDefinitionsResolverSuite extends munit.FunSuite {
             required = false
           )
         ),
+        headerParams = List.empty,
         reqBody = None,
         resBody = Some(ResBodyDefinition(Arr(Ref("Pet"), None, None, false))),
         tags = List("pet"),
@@ -64,7 +65,7 @@ class PathDefinitionsResolverSuite extends munit.FunSuite {
 
   // https://github.com/OAI/OpenAPI-Specification/blob/3.1.1/examples/v3.0/petstore.json
   test("PathDefinitionsResolver should resolve petstore_3.0.0.json") {
-    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "petstore_3.0.0.json") )
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("petstore_3.0.0.json"))
     // pprint.pprintln(openApiDefinition)
     val listPetsPath = openApiDefinition.pathDefinitions.defs.find(_.operationId == "listPets").get
     assertEquals(
@@ -80,6 +81,7 @@ class PathDefinitionsResolverSuite extends munit.FunSuite {
             required = false
           )
         ),
+        headerParams = List.empty,
         reqBody = None,
         resBody = Some(value = ResBodyDefinition(schema = Arr(Ref("Pet"), None, Some(100), false))),
         tags = List("pets"),
@@ -87,6 +89,31 @@ class PathDefinitionsResolverSuite extends munit.FunSuite {
         description = "",
         operationId = "listPets"
       )
+    )
+  }
+
+  test("PathDefinitionsResolver should resolve servers and header params from sttp_client.yaml") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("sttp_client.yaml"))
+    assertEquals(
+      openApiDefinition.servers,
+      List("http://petstore.swagger.io/v1", "http://petstore.swagger.io/v2")
+    )
+
+    val getPetByIdPath = openApiDefinition.pathDefinitions.defs.find(_.operationId == "getPetById").get
+    assertEquals(
+      getPetByIdPath.headerParams,
+      List(
+        HeaderParam(name = "api_key", schema = Str(None, None, None, None), required = true),
+        HeaderParam(name = "trace", schema = Str(None, None, None, None), required = false)
+      )
+    )
+
+    // object-typed header/query params are dropped (lenient)
+    val findPetsByStatusPath =
+      openApiDefinition.pathDefinitions.defs.find(_.operationId == "findPetsByStatus").get
+    assertEquals(
+      findPetsByStatusPath.queryParams.map(_.name),
+      List("status", "limit")
     )
   }
 

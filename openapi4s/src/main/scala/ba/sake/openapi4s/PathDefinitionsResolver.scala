@@ -147,11 +147,36 @@ class PathDefinitionsResolver(
                 }
                 .toList
 
+            /* header */
+            val headerParams =
+              Option(operation.getParameters)
+                .map(_.asScala)
+                .getOrElse(List.empty)
+                .filter(_.getIn == "header")
+                .flatMap { param =>
+                  val paramSchema =
+                    schemaDefinitionResolver.resolveSchema(
+                      param.getSchema,
+                      s"path ${method} '${pathKey}' header param '${param.getName}'"
+                    )
+                  if (isAllowedQueryParamSchema(paramSchema))
+                    Some(HeaderParam(param.getName, paramSchema, Option(param.getRequired).exists(_.booleanValue)))
+                  else {
+                    println(
+                      s"Header param schema not allowed: ${paramSchema} (probably an unnamed object). " +
+                        s"Param name: ${param.getName} in ${method} ${pathKey}. Skipping."
+                    )
+                    None
+                  }
+                }
+                .toList
+
             PathDefinition(
               method = method.toString,
               path = pathKey,
               pathSegments = pathSegments,
               queryParams = queryParams,
+              headerParams = headerParams,
               reqBody = reqBody,
               resBody = resBody,
               tags = Option(operation.getTags).map(_.asScala.toList).getOrElse(List.empty),

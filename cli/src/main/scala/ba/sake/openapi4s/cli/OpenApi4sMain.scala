@@ -20,7 +20,11 @@ object OpenApi4sMain {
       @arg(doc = "Base package for generated sources")
       basePackage: String,
       @arg(doc = "Validation backend: 'none', 'iron' or 'validson'. If unset, defaults to 'none'.")
-      validation: String = "none"
+      validation: String = "none",
+      @arg(doc = "Client backend: 'sttp' or 'none'. If unset, defaults to 'none'.")
+      client: String = "none",
+      @arg(doc = "Comma-separated tags to generate clients for. Currently applies only to clients.")
+      tags: String = ""
   ) = {
     val writer = OpenApiWriter(
       config = OpenApiWriter.Config(
@@ -29,7 +33,12 @@ object OpenApi4sMain {
         basePackage = basePackage,
         models = models,
         framework = framework,
-        validation = validation
+        validation = validation,
+        client = client,
+        tags = tags.split(",").toList.map(_.trim).filter(_.nonEmpty) match {
+          case Nil  => None
+          case list => Some(list)
+        }
       )
     )
     writer.write()

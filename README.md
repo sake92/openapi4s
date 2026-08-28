@@ -47,6 +47,26 @@ Openapi4s is a matrix of independent backends — pick one model backend, one fr
 `sharaf` works with `tupson` models, `http4s` works with `circe` models.
 Other model/framework combos only print a warning — generated sources may need manual adjustments.
 
+### Client backends
+
+| Feature | `sttp` |
+|---|---|
+| HTTP clients — one `XClient` class per tag | ✅ |
+| Path, query and header params | ✅ |
+| JSON request/response bodies (`application/json`) | ✅ |
+| Spec `servers` → `server1`, `server2`, ... constants in the client companion | ✅ |
+| Selective generation via `--tags` (applies to clients only) | ✅ |
+| Auth/security schemes, multipart, streaming, non-JSON content types | TODO — contributions welcome |
+
+`sttp` works with both `tupson` and `circe` models. Generated example:
+
+```scala
+class PetClient(baseUrl: String) {
+  def getPetById(petId: Long): Request[Either[ResponseException[String], Pet]] =
+    basicRequest.get(uri"$baseUrl/pet/$petId").response(asJson[Pet])
+}
+```
+
 ### Validation backends
 
 Optionally enable validation of your generated models with `--validation`:
@@ -83,6 +103,7 @@ Add the dependencies that the generated code needs to your own build:
 | `sharaf` controllers | `ivy"ba.sake::sharaf:0.9.3"` |
 | `http4s` routes | `ivy"org.http4s::http4s-dsl:0.23.x"` (with circe models also `ivy"org.http4s::http4s-circe:0.23.x"`) |
 | `iron` validation | `ivy"io.github.iltotore::iron:3.0.2"`, `ivy"io.github.iltotore::iron-circe:3.0.2"` |
+| `sttp` clients | `ivy"com.softwaremill.sttp.client4::core:4.0.26"` (with circe models also `ivy"com.softwaremill.sttp.client4::circe:4.0.26"`) |
 
 ## Usage
 
@@ -105,6 +126,8 @@ cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain --
 | `--models` | `tupson` | Model backend: `circe`, `tupson` or `none` |
 | `--framework` | `sharaf` | Framework backend: `sharaf`, `http4s` or `none` |
 | `--validation` | `none` | Validation backend: `none`, `iron` or `validson` |
+| `--client` | `none` | Client backend: `sttp` or `none` |
+| `--tags` | *(none)* | Comma-separated tags to generate clients for. Currently applies only to clients. |
 | `--url` | `openapi.json` | OpenAPI spec — a URL or a file path |
 | `--baseFolder` | `src/main/scala` | Folder for generated sources |
 | `--basePackage` | *(required)* | Package for generated sources |
@@ -123,6 +146,15 @@ You can combine the backends independently:
 
 # routes only (expects existing com.example.models)
 --models none --framework http4s
+
+# tupson models + sttp client for all tags
+--models tupson --framework none --client sttp
+
+# circe models + sttp client, only for tags Pet and Store (applies to clients only)
+--models circe --framework none --client sttp --tags Pet,Store
+
+# models + sharaf server + sttp client in one run
+--models tupson --framework sharaf --client sttp
 ```
 
 Generated files land in `<baseFolder>/<basePackage path>/`:
@@ -131,7 +163,8 @@ Generated files land in `<baseFolder>/<basePackage path>/`:
 src/main/scala/com/example/
 ├── models/          # one file per schema (+ LocalDateJsonRW.scala for tupson, Newtypes.scala for iron)
 ├── controllers/     # sharaf controllers
-└── routes/          # http4s routes
+├── routes/          # http4s routes
+└── clients/         # sttp clients (+ JsonSupport.scala for tupson)
 ```
 
 ### Mill plugin
@@ -142,6 +175,7 @@ There is also a Mill plugin: https://github.com/sake92/mill-openapi4s
 
 - JSON only — no XML, protobuf, etc.
 - `http4s` backend: routes only; query params and validation are not implemented yet
+- `sttp` client backend: no auth/security schemes, multipart, streaming, or non-JSON content types yet
 
 ## Development
 
