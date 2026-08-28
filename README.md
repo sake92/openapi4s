@@ -58,7 +58,7 @@ Other model/framework combos only print a warning — generated sources may need
 | Selective generation via `--tags` (applies to clients only) | ✅ |
 | Auth/security schemes, multipart, streaming, non-JSON content types | TODO — contributions welcome |
 
-`sttp` works with both `tupson` and `circe` models. Generated example:
+`sttp` works with both `tupson` and `circe` models. tupson clients use `ba.sake.sttp.tupson.asJson` natively (no generated `JsonSupport` helper). If you generated with an older version, delete any stale `clients/JsonSupport.scala`. Generated example:
 
 ```scala
 class PetClient(baseUrl: String) {
@@ -103,7 +103,7 @@ Add the dependencies that the generated code needs to your own build:
 | `sharaf` controllers | `ivy"ba.sake::sharaf:0.9.3"` |
 | `http4s` routes | `ivy"org.http4s::http4s-dsl:0.23.x"` (with circe models also `ivy"org.http4s::http4s-circe:0.23.x"`) |
 | `iron` validation | `ivy"io.github.iltotore::iron:3.0.2"`, `ivy"io.github.iltotore::iron-circe:3.0.2"` |
-| `sttp` clients | `ivy"com.softwaremill.sttp.client4::core:4.0.26"` (with circe models also `ivy"com.softwaremill.sttp.client4::circe:4.0.26"`, with tupson models also `ivy"ba.sake::tupson-sttp:0.30.0"`) |
+| `sttp` clients | `ivy"com.softwaremill.sttp.client4::core:4.0.26"` (with circe models also `ivy"com.softwaremill.sttp.client4::circe:4.0.26"`; with tupson models also `ivy"ba.sake::tupson-sttp:0.30.0"`) |
 
 ## Usage
 
