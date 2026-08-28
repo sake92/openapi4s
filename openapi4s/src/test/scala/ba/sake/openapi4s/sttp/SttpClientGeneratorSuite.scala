@@ -107,27 +107,20 @@ class SttpClientGeneratorSuite extends munit.FunSuite {
     assert(petClientSrc.contains(".response(asJson[Pet])"))
   }
 
-  test("generate() should generate a tupson JsonSupport helper and use it") {
+  test("generate() should use ba.sake.sttp.tupson for tupson clients and not emit JsonSupport") {
     val configTupson = config.copy(models = "tupson")
     val modelContractTupson = ModelBackend.byId(ModelBackendId.Tupson).contract(configTupson)
     val sources = new SttpClientGenerator(configTupson, openapiDefinition, modelContractTupson).generate()
 
-    val jsonSupportSrc = sources.find(_.file.toString == "clients/JsonSupport.scala").get.source.syntax
-    assert(jsonSupportSrc.contains("object JsonSupport {"))
-    assert(jsonSupportSrc.contains("def asJson[T: JsonRW]: ResponseAs[Either[ResponseException[String], T]]"))
-    assert(jsonSupportSrc.contains("ResponseAs.deserializeRightCatchingExceptions(_.parseJson[T])"))
+    assert(!sources.exists(_.file.toString == "clients/JsonSupport.scala"))
 
     val petClientSrc = sources.find(_.file.toString == "clients/PetClient.scala").get.source.syntax
     // scala.meta renders wildcard imports as `_`
-    assert(petClientSrc.contains("import mypkg.clients.JsonSupport._"))
+    assert(petClientSrc.contains("import ba.sake.sttp.tupson._"))
     assert(petClientSrc.contains("import ba.sake.tupson.{ given, _ }"))
     assert(!petClientSrc.contains("import sttp.client4.circe._"))
-    assert(
-      petClientSrc.contains(
-        "def addPet(pet: Pet): Request[Either[ResponseException[String], Pet]] = {"
-      )
-    )
-    assert(petClientSrc.contains(".body(pet.toJson).contentType(\"application/json\")"))
-    assert(petClientSrc.contains(".response(JsonSupport.asJson[Pet])"))
+    assert(petClientSrc.contains("def addPet(pet: Pet): Request[Either[ResponseException[String], Pet]] = {"))
+    assert(petClientSrc.contains(".body(asJson(pet))"))
+    assert(petClientSrc.contains(".response(asJson[Pet])"))
   }
 }
