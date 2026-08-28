@@ -151,7 +151,7 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     val generatedFiles = listScalaFiles(baseFolder.resolve("pkg"))
     assert(generatedFiles.exists(_.startsWith("models/")))
     assert(generatedFiles.exists(_.startsWith("clients/PetClient.scala")))
-    assert(generatedFiles.exists(_.startsWith("clients/JsonSupport.scala")))
+    assert(!generatedFiles.exists(_.startsWith("clients/JsonSupport.scala")))
     printGeneratedSources(baseFolder.resolve("pkg"))
   }
 
