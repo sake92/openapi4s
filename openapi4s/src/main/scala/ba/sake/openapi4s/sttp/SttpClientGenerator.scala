@@ -15,7 +15,7 @@ import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
   *   - `import sttp.client4.*`, `import sttp.client4.circe.*`
   *   - `asJson[B]: ResponseAs[Either[ResponseException[String], B]]`
   *   - uri interpolator drops `None` query params
-  *   - `ResponseAs.deserializeRightCatchingExceptions` for the tupson helper
+  *   - tupson bodies/responses use `ba.sake.sttp.tupson.asJson` (requires `ba.sake::tupson-sttp` on the classpath)
   */
 class SttpClientGenerator(
     config: OpenApiWriter.Config,
@@ -25,12 +25,9 @@ class SttpClientGenerator(
 
   override def generate(): Seq[GeneratedFileSource] = {
     val groupedByTag = openApiDefinition.pathDefinitions.defs.groupBy(_.getTag)
-    val clientSources = groupedByTag.flatMap { case (tag, pathDefinitions) =>
+    groupedByTag.flatMap { case (tag, pathDefinitions) =>
       generateClientSources(tag, pathDefinitions)
     }.toList
-    val jsonSupportSources =
-      if (config.models == "tupson") generateJsonSupportSource() else List.empty
-    clientSources ++ jsonSupportSources
   }
 
   private def generateClientSources(
@@ -69,11 +66,10 @@ class SttpClientGenerator(
 
   private def generateImports(): List[Import] = {
     if (config.models == "tupson") {
-      val jsonSupportImporter = s"${config.basePackage}.clients.JsonSupport.*".parse[Importer].get
       List(
         q"import sttp.client4.*",
         q"import ba.sake.tupson.{given, *}",
-        q"import ..${List(jsonSupportImporter)}",
+        q"import ba.sake.sttp.tupson.*",
         GenerationImports.modelWildcardImport(config.basePackage)
       )
     } else {
@@ -83,30 +79,6 @@ class SttpClientGenerator(
         GenerationImports.modelWildcardImport(config.basePackage)
       )
     }
-  }
-
-  /** sttp has no tupson module on Maven Central, so JSON (de)serialization goes through a small generated helper
-    * wrapping tupson's `parseJson`/`toJson`.
-    */
-  private def generateJsonSupportSource(): List[GeneratedFileSource] = {
-    val pkg = generatePkgSelect(s"${config.basePackage}.clients")
-    List(
-      GeneratedFileSource(
-        Paths.get("clients/JsonSupport.scala"),
-        source"""
-        // generated with OpenApi4s
-        package ${pkg} {
-            import ba.sake.tupson.{given, *}
-            import sttp.client4.*
-
-            object JsonSupport {
-                def asJson[T: JsonRW]: ResponseAs[Either[ResponseException[String], T]] =
-                    asString.mapWithMetadata(ResponseAs.deserializeRightCatchingExceptions(_.parseJson[T]))
-            }
-        }
-        """
-      )
-    )
   }
 
   private def generateMethodDef(
@@ -182,12 +154,8 @@ class SttpClientGenerator(
     }
     bodyParamOpt.foreach { case (bodyParam, _) =>
       val bodyTerm = ScalaIdents.termName(bodyParam)
-      if (config.models == "tupson") {
-        reqTerm = q"${reqTerm}.body(${bodyTerm}.toJson).contentType(${Lit.String("application/json")})"
-      } else {
-        // client4 has no BodySerializer overload; circe's asJson(x) builds a StringBody
-        reqTerm = q"${reqTerm}.body(asJson(${bodyTerm}))"
-      }
+      // circe's asJson(x) / tupson-sttp's asJson(x) both build a StringBody with ContentType application/json
+      reqTerm = q"${reqTerm}.body(asJson(${bodyTerm}))"
     }
     reqTerm = q"${reqTerm}.response(${responseAsExpr(pathDef)})"
 
@@ -208,17 +176,10 @@ class SttpClientGenerator(
   }
 
   private def responseAsExpr(pathDef: PathDefinition): Term = {
-    if (config.models == "tupson") {
-      pathDef.resBody match {
-        case Some(body) => q"JsonSupport.asJson[${responseType(pathDef)}]"
-        // plain asString errors on String, so map through ResponseException explicitly
-        case None => q"asString.mapWithMetadata(ResponseAs.deserializeRightCatchingExceptions(_ => ${Lit.Unit()}))"
-      }
-    } else {
-      pathDef.resBody match {
-        case Some(_) => q"asJson[${responseType(pathDef)}]"
-        case None    => q"asString.mapWithMetadata(ResponseAs.deserializeRightCatchingExceptions(_ => ${Lit.Unit()}))"
-      }
+    pathDef.resBody match {
+      case Some(_) => q"asJson[${responseType(pathDef)}]"
+      // plain asString errors on String, so map through ResponseException explicitly
+      case None    => q"asString.mapWithMetadata(ResponseAs.deserializeRightCatchingExceptions(_ => ${Lit.Unit()}))"
     }
   }
 
