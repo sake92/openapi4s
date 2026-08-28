@@ -33,7 +33,8 @@ class SttpClientCompilationSuite extends munit.FunSuite {
       scalaVersion = "3.7.3",
       dependencies = Seq(
         "com.softwaremill.sttp.client4::core:4.0.26",
-        "ba.sake::tupson:0.20.0",
+        "ba.sake::tupson:0.30.0",
+        "ba.sake::tupson-sttp:0.30.0",
         "ba.sake::validson:0.19.0"
       )
     )

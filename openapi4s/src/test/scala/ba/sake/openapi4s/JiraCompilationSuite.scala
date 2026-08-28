@@ -15,7 +15,7 @@ class JiraCompilationSuite extends munit.FunSuite {
     CompilationTestUtils.compileGenerated(
       baseFolder.resolve("com/example/jira"),
       scalaVersion = "3.7.3",
-      dependencies = Seq("ba.sake::tupson:0.20.0", "ba.sake::validson:0.19.0")
+      dependencies = Seq("ba.sake::tupson:0.30.0", "ba.sake::validson:0.19.0")
     )
   }
 
@@ -29,11 +29,6 @@ class JiraCompilationSuite extends munit.FunSuite {
       framework = "none"
     )
     OpenApiWriter(config).write()
-    // tupson has no JsonRW[LocalDate]; provide it in the test (see CompilationTestUtils)
-    CompilationTestUtils.writeLocalDateJsonRW(
-      baseFolder.resolve(basePackage.replace('.', '/')).resolve("models"),
-      basePackage
-    )
     baseFolder
   }
 }
