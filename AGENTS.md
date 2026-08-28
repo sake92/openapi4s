@@ -32,7 +32,7 @@ Notes:
 - Run `scalafmt` before committing.
 - Commit messages use conventional prefixes (`feat:`, `fix:`, `docs:`, `test:`).
 - Active worktrees live in `.worktrees/` — changes there are on separate branches, not `main`.
-- Never commit spec/plan documents (e.g. `docs/superpowers/specs/`, `docs/superpowers/plans/`) to the repo — keep them out of git entirely.
+- Never commit any plan/spec documents to the repo (e.g. `docs/superpowers/` is gitignored) — keep them out of git entirely.
 
 ## External References
 
@@ -40,7 +40,6 @@ Notes:
 |------|------|
 | User docs | `README.md` |
 | Dev notes / TODOs / release | `DEV.md` |
-| Design docs | `docs/superpowers/specs/` |
 
 ## Commit Attribution
 
