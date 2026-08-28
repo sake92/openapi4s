@@ -82,7 +82,7 @@ Incompatible validation/model combos (e.g. `--models tupson --validation iron`) 
 ### Iron example
 
 ```shell
---models circe --framework none --validation iron
+--models circe --validation iron
 ```
 
 Generated models use newtypes such as:
@@ -123,10 +123,10 @@ cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain --
 
 | Flag | Default | Description |
 |---|---|---|
-| `--models` | `tupson` | Model backend: `circe`, `tupson` or `none` |
-| `--framework` | `sharaf` | Framework backend: `sharaf`, `http4s` or `none` |
+| `--models` | `tupson` | Model backend: `circe` or `tupson` |
+| `--framework` | *(none)* | Server framework backend: `http4s` or `sharaf`. If unset, no server is generated. |
 | `--validation` | `none` | Validation backend: `none`, `iron` or `validson` |
-| `--client` | `none` | Client backend: `sttp` or `none` |
+| `--client` | *(none)* | Client backend: `sttp`. If unset, no client is generated. |
 | `--tags` | *(none)* | Comma-separated tags to generate clients for. Currently applies only to clients. |
 | `--url` | `openapi.json` | OpenAPI spec — a URL or a file path |
 | `--baseFolder` | `src/main/scala` | Folder for generated sources |
@@ -142,16 +142,13 @@ You can combine the backends independently:
 --models tupson --framework sharaf
 
 # models only
---models tupson --framework none
-
-# routes only (expects existing com.example.models)
---models none --framework http4s
+--models tupson
 
 # tupson models + sttp client for all tags
---models tupson --framework none --client sttp
+--models tupson --client sttp
 
 # circe models + sttp client, only for tags Pet and Store (applies to clients only)
---models circe --framework none --client sttp --tags Pet,Store
+--models circe --client sttp --tags Pet,Store
 
 # models + sharaf server + sttp client in one run
 --models tupson --framework sharaf --client sttp
@@ -162,9 +159,9 @@ Generated files land in `<baseFolder>/<basePackage path>/`:
 ```
 src/main/scala/com/example/
 ├── models/          # one file per schema (+ LocalDateJsonRW.scala for tupson, Newtypes.scala for iron)
-├── controllers/     # sharaf controllers
-├── routes/          # http4s routes
-└── clients/         # sttp clients (+ JsonSupport.scala for tupson)
+├── controllers/     # sharaf controllers (only with --framework sharaf)
+├── routes/          # http4s routes (only with --framework http4s)
+└── clients/         # sttp clients (only with --client sttp; + JsonSupport.scala for tupson)
 ```
 
 ### Mill plugin
