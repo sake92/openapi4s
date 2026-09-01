@@ -1,0 +1,9 @@
+{
+  "title": "Address",
+  "type": "object",
+  "required": ["street"],
+  "properties": {
+    "street": { "type": "string" },
+    "postcode": { "type": "string" }
+  }
+}

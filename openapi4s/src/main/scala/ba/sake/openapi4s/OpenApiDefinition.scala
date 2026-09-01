@@ -25,6 +25,13 @@ case class OpenApiDefinition(
 object OpenApiDefinition {
 
   def parse(url: String): OpenApiDefinition = {
+    if (JsonSchemaDefinition.isInput(url)) JsonSchemaDefinition.parse(url)
+    else parseOpenApi(url)
+  }
+
+  def isJsonSchemaInput(url: String): Boolean = JsonSchemaDefinition.isInput(url)
+
+  private def parseOpenApi(url: String): OpenApiDefinition = {
     val result = new OpenAPIParser().readLocation(url, null, null)
     val openApi = result.getOpenAPI
     val errorMessagesOpt = Option(result.getMessages).map(_.asScala.toSeq).filterNot(_.isEmpty)

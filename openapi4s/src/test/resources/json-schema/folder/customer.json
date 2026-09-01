@@ -1,0 +1,9 @@
+{
+  "title": "Customer",
+  "type": "object",
+  "required": ["address"],
+  "properties": {
+    "name": { "type": "string" },
+    "address": { "$ref": "address.json" }
+  }
+}

@@ -43,6 +43,24 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     printGeneratedSources(baseFolder.resolve("pkg"))
   }
 
+  test("composed generator should support models from a JSON Schema directory") {
+    val baseFolder = Files.createTempDirectory("openapi4s-json-schema-folder")
+    val schemaFolder = Paths.get(getClass.getClassLoader.getResource("json-schema/folder").toURI)
+    val config = OpenApiWriter.Config(
+      url = schemaFolder.toString,
+      baseFolder = baseFolder,
+      basePackage = "pkg",
+      models = "tupson",
+      framework = "none"
+    )
+    OpenApiWriter(config).write()
+    val generatedFiles = listScalaFiles(baseFolder.resolve("pkg"))
+    assert(generatedFiles.contains("models/Address.scala"))
+    assert(generatedFiles.contains("models/Customer.scala"))
+    val customer = Files.readString(baseFolder.resolve("pkg/models/Customer.scala"))
+    assert(customer.contains("address: Address"))
+  }
+
   test("composed generator should support none + http4s") {
     val baseFolder = Files.createTempDirectory("openapi4s-none-http4s")
     val config = OpenApiWriter.Config(

@@ -15,7 +15,7 @@ object OpenApi4sMain {
       framework: Option[String] = None,
       @arg(doc = "Client backend: 'sttp'. If unset, no client is generated.")
       client: Option[String] = None,
-      @arg(doc = "OpenAPI URL or file path. Default is 'openapi.json'")
+      @arg(doc = "OpenAPI URL/file path, or a local JSON Schema .json file/directory. Default is 'openapi.json'")
       url: String = "openapi.json",
       @arg(doc = "Base folder for generated sources. Default is 'src/main/scala'")
       baseFolder: String = "src/main/scala",

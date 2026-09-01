@@ -66,6 +66,16 @@ object OpenApiWriter {
       )
     }
 
+    if (
+      OpenApiDefinition.isJsonSchemaInput(
+        config.url
+      ) && (frameworkId != FrameworkBackendId.NoFramework || clientId != ClientBackendId.NoClient)
+    ) {
+      throw new RuntimeException(
+        "JSON Schema input supports model generation only; omit --framework and --client."
+      )
+    }
+
     val modelBackend = modelBackends(modelId)
     val frameworkBackend = frameworkBackends(frameworkId)
     val clientBackend = clientBackends(clientId)

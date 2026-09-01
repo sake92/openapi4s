@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Person",
+  "type": "object",
+  "required": ["name", "status"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "age": { "type": "integer" },
+    "status": { "$ref": "#/$defs/Status" }
+  },
+  "$defs": {
+    "Status": {
+      "type": "string",
+      "enum": ["active", "inactive"]
+    }
+  }
+}

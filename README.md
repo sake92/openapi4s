@@ -1,6 +1,6 @@
 # openapi4s
 
-OpenAPI generators for Scala 3. Give it an OpenAPI 3.0/3.1 spec and it generates idiomatic Scala 3 models and HTTP routes/controllers.
+OpenAPI generators for Scala 3. Give it an OpenAPI 3.0/3.1 spec and it generates idiomatic Scala 3 models and HTTP routes/controllers. It also accepts local JSON Schema files or directories for model-only generation.
 
 [![CI](https://github.com/sake92/openapi4s/actions/workflows/ci.yml/badge.svg)](https://github.com/sake92/openapi4s/actions/workflows/ci.yml)
 
@@ -128,7 +128,7 @@ cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain --
 | `--validation` | `none` | Validation backend: `none`, `iron` or `validson` |
 | `--client` | *(none)* | Client backend: `sttp`. If unset, no client is generated. |
 | `--tags` | *(none)* | Comma-separated tags to generate clients for. Currently applies only to clients. |
-| `--url` | `openapi.json` | OpenAPI spec — a URL or a file path |
+| `--url` | `openapi.json` | OpenAPI spec URL/file path, or a local JSON Schema `.json` file/directory |
 | `--baseFolder` | `src/main/scala` | Folder for generated sources |
 | `--basePackage` | *(required)* | Package for generated sources |
 
@@ -143,6 +143,9 @@ You can combine the backends independently:
 
 # models only
 --models tupson
+
+# models from one JSON Schema file or a directory of .json schemas
+--models tupson --url schemas/
 
 # tupson models + sttp client for all tags
 --models tupson --client sttp
@@ -171,6 +174,7 @@ There is also a Mill plugin: https://github.com/sake92/mill-openapi4s
 ## Limitations
 
 - JSON only — no XML, protobuf, etc.
+- JSON Schema input is local and model-only: use a `.json` file or directory. Directory references may target another schema root or a top-level `$defs` entry (`other.json#/$defs/Name`).
 - `http4s` backend: routes only; query params and validation are not implemented yet
 - `sttp` client backend: no auth/security schemes, multipart, streaming, or non-JSON content types yet
 
