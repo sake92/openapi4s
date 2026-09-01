@@ -1,0 +1,35 @@
+{
+  "description": "Schema for a button click event",
+  "properties": {
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "id": {
+      "type": ["string", "null"],
+      "maxLength": 4096
+    },
+    "classes": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string",
+        "maxLength": 4096
+      }
+    },
+    "name": {
+      "type": ["string", "null"],
+      "maxLength": 4096
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": ["label"],
+  "self": {
+    "vendor": "com.snowplowanalytics.snowplow",
+    "name": "button_click",
+    "format": "jsonschema",
+    "version": "1-0-0"
+  },
+  "$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#"
+}

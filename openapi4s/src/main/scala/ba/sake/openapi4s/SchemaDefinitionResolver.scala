@@ -78,14 +78,14 @@ class SchemaDefinitionResolver {
     val schemaDefs = namedDefs.toList.flatMap { case (schemaKey, schemaDef) =>
       if (isModel(schemaDef)) {
         normalize(schemaDef) match {
-          case obj: SchemaDefinition.Obj          => Some(SchemaDefinition.Named(schemaKey, obj))
-          case enm: SchemaDefinition.Enum         => Some(SchemaDefinition.Named(schemaKey, enm))
+          case obj: SchemaDefinition.Obj           => Some(SchemaDefinition.Named(schemaKey, obj))
+          case enm: SchemaDefinition.Enum          => Some(SchemaDefinition.Named(schemaKey, enm))
           case enmL: SchemaDefinition.EnumLiterals => Some(SchemaDefinition.Named(schemaKey, enmL))
-          case const: SchemaDefinition.Const      => Some(SchemaDefinition.Named(schemaKey, const))
-          case mapObj: SchemaDefinition.MapObj    => Some(SchemaDefinition.Named(schemaKey, mapObj))
-          case oneOf: SchemaDefinition.OneOf      => Some(SchemaDefinition.Named(schemaKey, oneOf))
-          case anyOf: SchemaDefinition.AnyOf      => Some(SchemaDefinition.Named(schemaKey, anyOf))
-          case allOf: SchemaDefinition.AllOf      => Some(SchemaDefinition.Named(schemaKey, allOf))
+          case const: SchemaDefinition.Const       => Some(SchemaDefinition.Named(schemaKey, const))
+          case mapObj: SchemaDefinition.MapObj     => Some(SchemaDefinition.Named(schemaKey, mapObj))
+          case oneOf: SchemaDefinition.OneOf       => Some(SchemaDefinition.Named(schemaKey, oneOf))
+          case anyOf: SchemaDefinition.AnyOf       => Some(SchemaDefinition.Named(schemaKey, anyOf))
+          case allOf: SchemaDefinition.AllOf       => Some(SchemaDefinition.Named(schemaKey, allOf))
           case other =>
             println(
               s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!!"
@@ -172,9 +172,12 @@ class SchemaDefinitionResolver {
         }
       // OpenApi 3.1 complicates this a bit
       case jsonSchema: JsonSchema =>
-        val types = Option(jsonSchema.getTypes).map(_.asScala).getOrElse(Set.empty)
+        val types = Option(jsonSchema.getTypes)
+          .map(_.asScala.toSet)
+          .getOrElse(Option(jsonSchema.getType).toSet)
+        val nonNullTypes = types - "null"
         // we only handle the first type...
-        types.headOption match {
+        nonNullTypes.headOption match {
           case Some(schemaType) =>
             schemaType match {
               case "string" =>
@@ -220,7 +223,10 @@ class SchemaDefinitionResolver {
       // TODO  file, with multipart forms!...
       // case _: BinarySchema =>
     }
-    val nullable = schema.getNullable
+    val nullable = schema.getNullable || (schema match {
+      case jsonSchema: JsonSchema => Option(jsonSchema.getTypes).exists(_.contains("null"))
+      case _                      => false
+    })
     if (nullable) SchemaDefinition.Opt(baseSchemaDef)
     else baseSchemaDef
   }
@@ -280,10 +286,17 @@ class SchemaDefinitionResolver {
   }
 
   private def getObjectSchema(schema: Schema[?], context: String): SchemaDefinition = {
+    val hasProperties = Option(schema.getProperties).exists(!_.isEmpty)
     Option(schema.getAdditionalProperties) match {
-      case Some(valueSchema: Schema[?]) =>
+      // swagger-parser represents JSON Schema `false` as a Schema with
+      // booleanSchemaValue=false. It closes an object; it does not make it a map.
+      case Some(valueSchema: Schema[?]) if Option(valueSchema.getBooleanSchemaValue).contains(false) =>
+        getObjectProperties(schema, context)
+      case Some(value: java.lang.Boolean) if !value.booleanValue =>
+        getObjectProperties(schema, context)
+      case Some(valueSchema: Schema[?]) if !hasProperties =>
         SchemaDefinition.MapObj(Some(resolveSchema(valueSchema, context)))
-      case Some(_: java.lang.Boolean) if Option(schema.getProperties).forall(_.isEmpty) =>
+      case Some(_: java.lang.Boolean) if !hasProperties =>
         SchemaDefinition.MapObj(None)
       case _ =>
         getObjectProperties(schema, context)

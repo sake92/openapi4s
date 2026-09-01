@@ -20,6 +20,20 @@ class JsonSchemaDefinitionSuite extends munit.FunSuite {
     assert(customer.schema.toString.contains("Ref(Address)"))
   }
 
+  test("parses Snowplow self-describing object schemas") {
+    val definition = OpenApiDefinition.parse(TestUtils.getResourceUrl("json-schema/single/button_click.json"))
+    val buttonClick =
+      definition.namedSchemaDefinitions.defs.find(_.name == "button_click").getOrElse(fail("button_click missing"))
+
+    buttonClick.schema match {
+      case SchemaDefinition.Obj(properties) =>
+        assertEquals(properties.map(_.name), List("label", "id", "classes", "name"))
+        assert(properties.find(_.name == "id").exists(_.schema.isInstanceOf[SchemaDefinition.Opt]))
+        assert(properties.find(_.name == "classes").exists(_.schema.isInstanceOf[SchemaDefinition.Opt]))
+      case other => fail(s"Expected object schema, got $other")
+    }
+  }
+
   test("JSON Schema input rejects server and client generation") {
     val baseFolder = Files.createTempDirectory("openapi4s-json-schema")
     interceptMessage[RuntimeException](

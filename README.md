@@ -109,16 +109,41 @@ Add the dependencies that the generated code needs to your own build:
 
 ### CLI
 
-Run the CLI with the Coursier launcher:
+All runs generate models. Add `--framework` to generate a server and `--client` to
+generate a client. The examples below are self-contained; replace the spec path and
+`--basePackage` with your own values.
+
+Generate a server (models + routes/controllers, without a client):
+
+```shell
+cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
+  --models circe \
+  --framework http4s \
+  --url openapi.yaml \
+  --baseFolder src/main/scala \
+  --basePackage com.example.api
+```
+
+Generate a client (models + sttp client, without a server):
 
 ```shell
 cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models tupson \
-  --framework sharaf \
-  --validation validson \
-  --url openapi.json \
+  --client sttp \
+  --url openapi.yaml \
   --baseFolder src/main/scala \
-  --basePackage com.example
+  --basePackage com.example.api
+```
+
+Generate models only from a local JSON Schema file (or replace `schemas/user.json`
+with a directory of `.json` schema files):
+
+```shell
+cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
+  --models tupson \
+  --url schemas/user.json \
+  --baseFolder src/main/scala \
+  --basePackage com.example.models
 ```
 
 | Flag | Default | Description |
@@ -132,7 +157,7 @@ cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain --
 | `--baseFolder` | `src/main/scala` | Folder for generated sources |
 | `--basePackage` | *(required)* | Package for generated sources |
 
-You can combine the backends independently:
+You can combine or customize the backends independently:
 
 ```shell
 # circe models + http4s routes
@@ -141,7 +166,7 @@ You can combine the backends independently:
 # tupson models + sharaf controllers
 --models tupson --framework sharaf
 
-# models only
+# models only from an OpenAPI spec
 --models tupson
 
 # models from one JSON Schema file or a directory of .json schemas
