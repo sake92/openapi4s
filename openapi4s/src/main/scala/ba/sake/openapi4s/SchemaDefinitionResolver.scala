@@ -108,7 +108,7 @@ class SchemaDefinitionResolver {
 
   private def normalize(schemaDef: SchemaDefinition, seenAliases: Set[String]): SchemaDefinition = schemaDef match {
     case SchemaDefinition.Opt(inner) =>
-      SchemaDefinition.Opt(normalize(inner, seenAliases))
+      SchemaDefinition.optional(normalize(inner, seenAliases))
     case SchemaDefinition.Arr(inner, minItems, maxItems, uniqueItems) =>
       SchemaDefinition.Arr(normalize(inner, seenAliases), minItems, maxItems, uniqueItems)
     case SchemaDefinition.OneOf(schemas, discriminatorPropertyName) =>
@@ -227,7 +227,7 @@ class SchemaDefinitionResolver {
       case jsonSchema: JsonSchema => Option(jsonSchema.getTypes).exists(_.contains("null"))
       case _                      => false
     })
-    if (nullable) SchemaDefinition.Opt(baseSchemaDef)
+    if (nullable) SchemaDefinition.optional(baseSchemaDef)
     else baseSchemaDef
   }
 
@@ -310,7 +310,7 @@ class SchemaDefinitionResolver {
       .getOrElse(List.empty)
       .map { case (propertyKey, property) =>
         val coreSchema = resolveSchema(property, s"${context}.${propertyKey}")
-        val schema = if (requiredProperties(propertyKey)) coreSchema else SchemaDefinition.Opt(coreSchema)
+        val schema = if (requiredProperties(propertyKey)) coreSchema else SchemaDefinition.optional(coreSchema)
         SchemaProperty(propertyKey, schema)
       }
       .toList

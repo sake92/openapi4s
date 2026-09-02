@@ -1,6 +1,7 @@
 # openapi4s
 
-OpenAPI generators for Scala 3. Give it an OpenAPI 3.0/3.1 spec and it generates idiomatic Scala 3 models and HTTP routes/controllers. It also accepts local JSON Schema files or directories for model-only generation.
+OpenAPI generators for Scala 3. Give it an OpenAPI 3.0/3.1 spec and it generates idiomatic Scala 3 models and HTTP routes/controllers.
+It also accepts local JSON Schema files or directories for model-only generation.
 
 [![CI](https://github.com/sake92/openapi4s/actions/workflows/ci.yml/badge.svg)](https://github.com/sake92/openapi4s/actions/workflows/ci.yml)
 
@@ -79,19 +80,6 @@ Optionally enable validation of your generated models with `--validation`:
 
 Incompatible validation/model combos (e.g. `--models tupson --validation iron`) are rejected at startup.
 
-### Iron example
-
-```shell
---models circe --validation iron
-```
-
-Generated models use newtypes such as:
-
-```scala
-type Email = Email.T
-object Email extends RefinedType[String, Match["^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"]]
-```
-
 ## Requirements
 
 Add the dependencies that the generated code needs to your own build:
@@ -113,10 +101,10 @@ All runs generate models. Add `--framework` to generate a server and `--client` 
 generate a client. The examples below are self-contained; replace the spec path and
 `--basePackage` with your own values.
 
-Generate a server (models + routes/controllers, without a client):
+Generate a server (models + routes/controllers):
 
 ```shell
-cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
+cs launch ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models circe \
   --framework http4s \
   --url openapi.yaml \
@@ -124,10 +112,10 @@ cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain --
   --basePackage com.example.api
 ```
 
-Generate a client (models + sttp client, without a server):
+Generate a client (models + sttp client):
 
 ```shell
-cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
+cs launch ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models tupson \
   --client sttp \
   --url openapi.yaml \
@@ -135,13 +123,12 @@ cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain --
   --basePackage com.example.api
 ```
 
-Generate models only from a local JSON Schema file (or replace `schemas/user.json`
-with a directory of `.json` schema files):
+Generate models only from a `my_schemas` folder:
 
 ```shell
-cs launch ba.sake::openapi4s-cli:0.7.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
+cs launch ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models tupson \
-  --url schemas/user.json \
+  --url my_schemas \
   --baseFolder src/main/scala \
   --basePackage com.example.models
 ```

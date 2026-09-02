@@ -9,7 +9,7 @@ import ba.sake.openapi4s.EnumLiteral._
 class SchemaDefinitionResolverSuite extends munit.FunSuite {
 
   test("SchemaDefinitionResolver should resolve petstore.json named schemas") {
-    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "petstore.json"))
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("petstore.json"))
     // pprint.pprintln(openApiDefinition)
     assertEquals(
       openApiDefinition.namedSchemaDefinitions.defs.map(_.name),
@@ -35,8 +35,8 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
   }
 
   test("SchemaDefinitionResolver should resolve oneOf.yaml named schemas") {
-    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl( "oneOf.yaml"))
-   // pprint.pprintln(openApiDefinition)
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("oneOf.yaml"))
+    // pprint.pprintln(openApiDefinition)
   }
 
   test("SchemaDefinitionResolver should resolve tupson_features.yaml named schemas") {
@@ -191,6 +191,15 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
     assertEquals(resolver.resolveSchema(schema, "ctx"), SchemaDefinition.Str(None, None, None, None))
   }
 
+  test("an optional nullable enum has one optionality level") {
+    val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("tupson_features_31.yaml"))
+    val device = openApiDefinition.namedSchemaDefinitions.defs.find(_.name == "Device").get
+    assertEquals(
+      device,
+      Named("Device", Obj(List(SchemaProperty("devicePlatform", Opt(Enum(List("web", "mob"), None))))))
+    )
+  }
+
   test("alias named schemas resolve to their underlying type at $ref sites") {
     val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("aliases.yaml"))
     val thing = openApiDefinition.namedSchemaDefinitions.defs.find(_.name == "Thing").get
@@ -198,10 +207,12 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
       thing,
       SchemaDefinition.Named(
         "Thing",
-        Obj(List(
-          SchemaProperty("id", Opt(Uuid(None))),
-          SchemaProperty("status", Opt(Enum(List("open"), None)))
-        ))
+        Obj(
+          List(
+            SchemaProperty("id", Opt(Uuid(None))),
+            SchemaProperty("status", Opt(Enum(List("open"), None)))
+          )
+        )
       )
     )
     val resBody = openApiDefinition.pathDefinitions.defs.head.resBody.get
@@ -215,7 +226,13 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
       Seq("Holder")
     )
     val holder = openApiDefinition.namedSchemaDefinitions.defs.head
-    assertEquals(holder, SchemaDefinition.Named("Holder", Obj(List(SchemaProperty("tags", Opt(Arr(Str(None, None, None, None), None, None, false)))))))
+    assertEquals(
+      holder,
+      SchemaDefinition.Named(
+        "Holder",
+        Obj(List(SchemaProperty("tags", Opt(Arr(Str(None, None, None, None), None, None, false)))))
+      )
+    )
   }
 
   test("oneOf with inline members is generated as a model, $refs stay Ref") {

@@ -40,6 +40,12 @@ object SchemaDefinition {
   // invented here
   case class Named(name: String, schema: NameableSchemaDefinition) extends SchemaDefinition
   case class Unknown() extends SchemaDefinition
+
+  /** Represents a schema that may be absent or null. Nested optionality has no extra meaning in generated Scala. */
+  def optional(schema: SchemaDefinition): SchemaDefinition = schema match {
+    case optional: Opt => optional
+    case other         => Opt(other)
+  }
 }
 
 sealed abstract class EnumLiteral

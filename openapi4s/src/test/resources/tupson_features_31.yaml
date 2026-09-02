@@ -32,3 +32,9 @@ components:
     Marker:
       type: string
       const: abc
+    Device:
+      type: object
+      properties:
+        devicePlatform:
+          type: [string, 'null']
+          enum: [web, mob, null]
