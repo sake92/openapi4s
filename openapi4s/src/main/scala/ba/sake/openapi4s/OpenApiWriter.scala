@@ -23,17 +23,17 @@ class OpenApiWriter(
     val (validationSources, validationTypeMap) = validationBackend.generate(config, openapiDefinition)
     val modelSources = modelBackend.generator(config, openapiDefinition, validationTypeMap).generate()
     val modelContract = modelBackend.contract(config)
-    val frameworkSources = frameworkBackend.generator(config, openapiDefinition, modelContract).generate()
-    // `tags` currently applies only to client generation
-    val clientDefinition = config.tags match {
-      case Some(tags) =>
-        openapiDefinition.copy(
-          pathDefinitions = PathDefinitions(
-            openapiDefinition.pathDefinitions.defs.filter(d => tags.exists(_.equalsIgnoreCase(d.getTag)))
-          )
-        )
-      case None => openapiDefinition
-    }
+    val serverDefinition = OpenApiWriter.filterByTags(
+      openapiDefinition,
+      config.serverTags.orElse(config.tags),
+      config.serverExcludeTags.orElse(config.excludeTags)
+    )
+    val frameworkSources = frameworkBackend.generator(config, serverDefinition, modelContract).generate()
+    val clientDefinition = OpenApiWriter.filterByTags(
+      openapiDefinition,
+      config.clientTags.orElse(config.tags),
+      config.clientExcludeTags.orElse(config.excludeTags)
+    )
     val clientSources = clientBackend.generator(config, clientDefinition, modelContract).generate()
     val packagePath = config.basePackage.replaceAll("\\.", "/")
     val adaptedGenSourceFiles = (validationSources ++ modelSources ++ frameworkSources ++ clientSources).map { gsf =>
@@ -117,7 +117,30 @@ object OpenApiWriter {
       framework: String,
       validation: String = "none",
       client: String = "none",
-      tags: Option[List[String]] = None
+      tags: Option[List[String]] = None,
+      excludeTags: Option[List[String]] = None,
+      serverTags: Option[List[String]] = None,
+      serverExcludeTags: Option[List[String]] = None,
+      clientTags: Option[List[String]] = None,
+      clientExcludeTags: Option[List[String]] = None
   )
+
+  /** Keeps only path definitions whose tag is in `include` (if set) and not in `exclude` (exclude wins). Case-insensitive. */
+  private[openapi4s] def filterByTags(
+      definition: OpenApiDefinition,
+      include: Option[List[String]],
+      exclude: Option[List[String]]
+  ): OpenApiDefinition =
+    if (include.isEmpty && exclude.isEmpty) definition
+    else {
+      def matches(tags: List[String], tag: String) = tags.exists(_.equalsIgnoreCase(tag))
+      definition.copy(
+        pathDefinitions = PathDefinitions(
+          definition.pathDefinitions.defs.filter { d =>
+            !exclude.exists(matches(_, d.getTag)) && include.forall(matches(_, d.getTag))
+          }
+        )
+      )
+    }
 
 }
