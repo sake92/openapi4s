@@ -56,7 +56,7 @@ Other model/framework combos only print a warning — generated sources may need
 | Path, query and header params | ✅ |
 | JSON request/response bodies (`application/json`) | ✅ |
 | Spec `servers` → `server1`, `server2`, ... constants in the client companion | ✅ |
-| Selective generation via `--tags` (applies to clients only) | ✅ |
+| Selective generation via `--tags` / `--excludeTags` (server and client; models are always generated) | ✅ |
 | Auth/security schemes, multipart, streaming, non-JSON content types | TODO — contributions welcome |
 
 `sttp` works with both `tupson` and `circe` models. tupson clients use `ba.sake.sttp.tupson.asJson` natively (no generated `JsonSupport` helper). If you generated with an older version, delete any stale `clients/JsonSupport.scala`. Generated example:
@@ -139,7 +139,10 @@ cs launch ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain --
 | `--framework` | *(none)* | Server framework backend: `http4s` or `sharaf`. If unset, no server is generated. |
 | `--validation` | `none` | Validation backend: `none`, `iron` or `validson` |
 | `--client` | *(none)* | Client backend: `sttp`. If unset, no client is generated. |
-| `--tags` | *(none)* | Comma-separated tags to generate clients for. Currently applies only to clients. |
+| `--tags` | *(none)* | Comma-separated tags to generate server and client code for (case-insensitive, first tag of an operation). |
+| `--excludeTags` | *(none)* | Comma-separated tags to skip for server and client. Wins over `--tags`. |
+| `--serverTags`, `--serverExcludeTags` | *(none)* | Server-only overrides of `--tags` / `--excludeTags`. |
+| `--clientTags`, `--clientExcludeTags` | *(none)* | Client-only overrides of `--tags` / `--excludeTags`. |
 | `--url` | `openapi.json` | OpenAPI spec URL/file path, or a local JSON Schema `.json` file/directory |
 | `--baseFolder` | `src/main/scala` | Folder for generated sources |
 | `--basePackage` | *(required)* | Package for generated sources |
@@ -162,7 +165,7 @@ You can combine or customize the backends independently:
 # tupson models + sttp client for all tags
 --models tupson --client sttp
 
-# circe models + sttp client, only for tags Pet and Store (applies to clients only)
+# circe models + sttp client, only for tags Pet and Store (also filters the server, if any)
 --models circe --client sttp --tags Pet,Store
 
 # models + sharaf server + sttp client in one run

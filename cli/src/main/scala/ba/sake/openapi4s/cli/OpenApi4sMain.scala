@@ -23,8 +23,18 @@ object OpenApi4sMain {
       basePackage: String,
       @arg(doc = "Validation backend: 'none', 'iron' or 'validson'. If unset, defaults to 'none'.")
       validation: String = "none",
-      @arg(doc = "Comma-separated tags to generate clients for. Currently applies only to clients.")
-      tags: String = ""
+      @arg(doc = "Comma-separated tags to generate server and client code for.")
+      tags: String = "",
+      @arg(doc = "Comma-separated tags to exclude from server and client. Wins over --tags.")
+      excludeTags: String = "",
+      @arg(doc = "Comma-separated tags for the server only. Overrides --tags.")
+      serverTags: String = "",
+      @arg(doc = "Comma-separated tags to exclude from the server only. Overrides --excludeTags.")
+      serverExcludeTags: String = "",
+      @arg(doc = "Comma-separated tags for the client only. Overrides --tags.")
+      clientTags: String = "",
+      @arg(doc = "Comma-separated tags to exclude from the client only. Overrides --excludeTags.")
+      clientExcludeTags: String = ""
   ) = {
     val (modelsResolved, frameworkResolved, clientResolved) = resolveBackends(models, framework, client)
     val writer = OpenApiWriter(
@@ -36,14 +46,22 @@ object OpenApi4sMain {
         framework = frameworkResolved,
         validation = validation,
         client = clientResolved,
-        tags = tags.split(",").toList.map(_.trim).filter(_.nonEmpty) match {
-          case Nil  => None
-          case list => Some(list)
-        }
+        tags = parseTags(tags),
+        excludeTags = parseTags(excludeTags),
+        serverTags = parseTags(serverTags),
+        serverExcludeTags = parseTags(serverExcludeTags),
+        clientTags = parseTags(clientTags),
+        clientExcludeTags = parseTags(clientExcludeTags)
       )
     )
     writer.write()
   }
+
+  private def parseTags(value: String): Option[List[String]] =
+    value.split(",").toList.map(_.trim).filter(_.nonEmpty) match {
+      case Nil  => None
+      case list => Some(list)
+    }
 
   /** Resolves the optional `--framework` and `--client` flags to library backend ids. `--models` is mandatory (always
     * generated). The library's internal "none" is not accepted from the CLI anymore — to generate no server/client,
