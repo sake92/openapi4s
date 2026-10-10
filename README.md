@@ -1,6 +1,6 @@
 # openapi4s
 
-OpenAPI generators for Scala 3. Give it an OpenAPI 3.0/3.1 spec and it generates idiomatic Scala 3 models and HTTP routes/controllers.
+OpenAPI generators for Scala 3. Give it an OpenAPI 3.0/3.1 spec and it generates idiomatic Scala 3 models, HTTP routes/controllers, and HTTP clients. It can also generate validators for your models.
 It also accepts local JSON Schema files or directories for model-only generation.
 
 [![CI](https://github.com/sake92/openapi4s/actions/workflows/ci.yml/badge.svg)](https://github.com/sake92/openapi4s/actions/workflows/ci.yml)
@@ -15,83 +15,6 @@ Small video demo: https://youtu.be/kf0vGrlKNb8
 - **lenient parser + generator**
   - if something is not supported it will still (mostly) work
   - you can adapt your OpenAPI spec to work gradually
-
-## Backends
-
-Openapi4s is a matrix of independent backends — pick one model backend, one framework backend, and optionally a validation backend.
-
-### Model backends
-
-| Feature | `circe` | `tupson` |
-|---|---|---|
-| Discriminated `oneOf` → sealed trait / enum | ✅ | ✅ |
-| Enums (singleton enums) | ✅ | ✅ |
-| `additionalProperties` → `Map` | ✅ | ✅ |
-| Inline (anonymous) objects → named tuples, e.g. `meta: (kind: String, age: Int)` | — | ✅ |
-| `oneOf`/`anyOf` without discriminator → union types, e.g. `type Pet = Cat \| Dog` | — | ✅ |
-| `const` and single-value enums → literal types, e.g. `kind: "dog"`, `count: 5` | — | ✅ |
-| Inline and non-string enums → literal unions, e.g. `status: "available" \| "pending"`, `num: 1 \| 2` | — | ✅ |
-| min/max/length/pattern constraints → Validson validators | — | ✅ |
-
-> When parsing union types, Tupson tries the members left-to-right and uses the
-> first one that parses. For overlapping object shapes use a `discriminator` in
-> your `oneOf` to get a sealed trait instead.
-
-### Framework backends
-
-| Feature | `sharaf` | `http4s` |
-|---|---|---|
-| Controllers / routes | ✅ | ✅ |
-| Query params | ✅ | TODO — contributions welcome |
-| Validation | ✅ | TODO — contributions welcome |
-
-`sharaf` works with `tupson` models, `http4s` works with `circe` models.
-Other model/framework combos only print a warning — generated sources may need manual adjustments.
-
-### Client backends
-
-| Feature | `sttp` |
-|---|---|
-| HTTP clients — one `XClient` class per tag | ✅ |
-| Path, query and header params | ✅ |
-| JSON request/response bodies (`application/json`) | ✅ |
-| Spec `servers` → `server1`, `server2`, ... constants in the client companion | ✅ |
-| Selective generation via `--tags` / `--excludeTags` (server and client; models are always generated) | ✅ |
-| Auth/security schemes, multipart, streaming, non-JSON content types | TODO — contributions welcome |
-
-`sttp` works with both `tupson` and `circe` models. tupson clients use `ba.sake.sttp.tupson.asJson` natively (no generated `JsonSupport` helper). If you generated with an older version, delete any stale `clients/JsonSupport.scala`. Generated example:
-
-```scala
-class PetClient(baseUrl: String) {
-  def getPetById(petId: Long): Request[Either[ResponseException[String], Pet]] =
-    basicRequest.get(uri"$baseUrl/pet/$petId").response(asJson[Pet])
-}
-```
-
-### Validation backends
-
-Optionally enable validation of your generated models with `--validation`:
-
-| `--validation` | Works with | What it does |
-|---|---|---|
-| `none` (default) | all | No validation backend. (Tupson models always get Validson constraint validators.) |
-| `iron` | `--models circe` | Generates [Iron](https://github.com/iltotore/iron) newtypes (e.g. `Email`, `Username`) for constrained properties, plus a `models/Newtypes.scala` file. Models become *correct by construction* — decoding an invalid value fails. |
-| `validson` | `--models tupson` | Constraint validation (min/max/length/pattern) with [Validson](https://github.com/sake92/validson) via generated `given Validator[X]` instances. |
-
-Incompatible validation/model combos (e.g. `--models tupson --validation iron`) are rejected at startup.
-
-## Requirements
-
-Add the dependencies that the generated code needs to your own build:
-
-| Generated | Requirements |
-|---|---|
-| `tupson` models | Scala 3.7+, `ivy"ba.sake::tupson:0.30.0"`, `ivy"ba.sake::validson:0.19.0"` |
-| `circe` models | Scala 3, `ivy"io.circe::circe-core:0.14.10"`, `ivy"io.circe::circe-generic:0.14.10"` |
-| `sharaf` controllers | `ivy"ba.sake::sharaf:0.9.3"` |
-| `http4s` routes | `ivy"org.http4s::http4s-dsl:0.23.x"` (with circe models also `ivy"org.http4s::http4s-circe:0.23.x"`) |
-| `iron` validation | `ivy"io.github.iltotore::iron:3.0.2"`, `ivy"io.github.iltotore::iron-circe:3.0.2"` |
-| `sttp` clients | `ivy"com.softwaremill.sttp.client4::core:4.0.26"` (with circe models also `ivy"com.softwaremill.sttp.client4::circe:4.0.26"`; with tupson models also `ivy"ba.sake::tupson-sttp:0.30.0"`) |
 
 ## Usage
 
@@ -182,9 +105,85 @@ src/main/scala/com/example/
 └── clients/         # sttp clients (only with --client sttp)
 ```
 
-### Mill plugin
+### Build plugins
 
-There is also a Mill plugin: https://github.com/sake92/mill-openapi4s
+The [Mill plugin](https://github.com/sake92/mill-openapi4s) and
+[sbt plugin](https://github.com/sake92/sbt-openapi4s) provide equivalent settings.
+
+## Backends
+
+Openapi4s is a matrix of independent backends — pick one model backend, one server backend, and optionally a validation backend.
+
+### Model backends
+
+| Feature | `circe` | `tupson` |
+|---|---|---|
+| Discriminated `oneOf` → sealed trait / enum | ✅ | ✅ |
+| Enums (singleton enums) | ✅ | ✅ |
+| `additionalProperties` → `Map` | ✅ | ✅ |
+| Inline (anonymous) objects → named tuples, e.g. `meta: (kind: String, age: Int)` | — | ✅ |
+| Undiscriminated `oneOf`/`anyOf` → union types, e.g. `type Pet = Cat \| Dog` | — | ✅ |
+| `const` and single-value enums → literal types, e.g. `kind: "dog"`, `count: 5` | — | ✅ |
+| Inline and non-string enums → literal types, e.g. `status: "available" \| "pending"`, `num: 1 \| 2` | — | ✅ |
+
+> When parsing union types, Tupson tries the members left-to-right and uses the
+> first one that parses. For overlapping object shapes use a `discriminator` in
+> your `oneOf` to get a sealed trait instead.
+
+### Server backends
+
+| Feature | `sharaf` | `http4s` |
+|---|---|---|
+| Controllers / routes | ✅ | ✅ |
+| Query params | ✅ | TODO — contributions welcome |
+
+`sharaf` works with `tupson` models, `http4s` works with `circe` models.
+Other model/framework combos only print a warning — generated sources may need manual adjustments.
+
+### Client backends
+
+| Feature | `sttp` |
+|---|---|
+| HTTP clients — one `XClient` class per tag | ✅ |
+| Path, query and header params | ✅ |
+| JSON request/response bodies (`application/json`) | ✅ |
+| Spec `servers` → `server1`, `server2`, ... constants in the client companion | ✅ |
+| Selective generation via `--tags` / `--excludeTags` (server and client; models are always generated) | ✅ |
+| Auth/security schemes, multipart, streaming, non-JSON content types | TODO — contributions welcome |
+
+`sttp` works with both `tupson` and `circe` models. tupson clients use `ba.sake.sttp.tupson.asJson` natively. Generated example:
+
+```scala
+class PetClient(baseUrl: String) {
+  def getPetById(petId: Long): Request[Either[ResponseException[String], Pet]] =
+    basicRequest.get(uri"$baseUrl/pet/$petId").response(asJson[Pet])
+}
+```
+
+### Validation backends
+
+Optionally enable validation of your generated models with `--validation`:
+
+| `--validation` | Works with | What it does |
+|---|---|---|
+| `none` (default) | all | No validation backend. (Tupson models always get Validson constraint validators.) |
+| `iron` | `--models circe` | Generates [Iron](https://github.com/iltotore/iron) newtypes (e.g. `Email`, `Username`) for constrained properties, plus a `models/Newtypes.scala` file. Models become *correct by construction* — decoding an invalid value fails. |
+| `validson` | `--models tupson` | Constraint validation (min/max/length/pattern) with [Validson](https://github.com/sake92/validson) via generated `given Validator[X]` instances. |
+
+Incompatible validation/model combos (e.g. `--models tupson --validation iron`) are rejected at startup.
+
+## Requirements
+
+Add the dependencies that the generated code needs to your own build:
+
+| Generated | Requirements |
+|---|---|
+| `tupson` models | Scala 3.7+, `ivy"ba.sake::tupson:0.30.0"`, `ivy"ba.sake::validson:0.19.0"` |
+| `circe` models | Scala 3, `ivy"io.circe::circe-core:0.14.10"`, `ivy"io.circe::circe-generic:0.14.10"` |
+| `sharaf` controllers | `ivy"ba.sake::sharaf:0.9.3"` |
+| `http4s` routes | `ivy"org.http4s::http4s-dsl:0.23.x"` (with circe models also `ivy"org.http4s::http4s-circe:0.23.x"`) |
+| `iron` validation | `ivy"io.github.iltotore::iron:3.0.2"`, `ivy"io.github.iltotore::iron-circe:3.0.2"` |
+| `sttp` clients | `ivy"com.softwaremill.sttp.client4::core:4.0.26"` (with circe models also `ivy"com.softwaremill.sttp.client4::circe:4.0.26"`; with tupson models also `ivy"ba.sake::tupson-sttp:0.30.0"`) |
 
 ## Limitations
 
