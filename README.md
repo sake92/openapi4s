@@ -7,6 +7,15 @@ It also accepts local JSON Schema files or directories for model-only generation
 
 Small video demo: https://youtu.be/kf0vGrlKNb8
 
+## Features
+
+- **incremental generator**
+  - doesn't touch the code that you added manually
+  - **additive only** — adds new properties/methods/classes
+- **lenient parser + generator**
+  - if something is not supported it will still (mostly) work
+  - you can adapt your OpenAPI spec to work gradually
+
 ## Usage
 
 ### CLI
@@ -101,15 +110,6 @@ src/main/scala/com/example/
 The [Mill plugin](https://github.com/sake92/mill-openapi4s) and
 [sbt plugin](https://github.com/sake92/sbt-openapi4s) provide equivalent settings.
 
-## Features
-
-- **incremental generator**
-  - doesn't touch the code that you added manually
-  - **additive only** — adds new properties/methods/classes
-- **lenient parser + generator**
-  - if something is not supported it will still (mostly) work
-  - you can adapt your OpenAPI spec to work gradually
-
 ## Backends
 
 Openapi4s is a matrix of independent backends — pick one model backend, one server backend, and optionally a validation backend.
@@ -136,7 +136,6 @@ Openapi4s is a matrix of independent backends — pick one model backend, one se
 |---|---|---|
 | Controllers / routes | ✅ | ✅ |
 | Query params | ✅ | TODO — contributions welcome |
-| Validation | ✅ | TODO — contributions welcome |
 
 `sharaf` works with `tupson` models, `http4s` works with `circe` models.
 Other model/framework combos only print a warning — generated sources may need manual adjustments.
@@ -152,7 +151,7 @@ Other model/framework combos only print a warning — generated sources may need
 | Selective generation via `--tags` / `--excludeTags` (server and client; models are always generated) | ✅ |
 | Auth/security schemes, multipart, streaming, non-JSON content types | TODO — contributions welcome |
 
-`sttp` works with both `tupson` and `circe` models. tupson clients use `ba.sake.sttp.tupson.asJson` natively (no generated `JsonSupport` helper). If you generated with an older version, delete any stale `clients/JsonSupport.scala`. Generated example:
+`sttp` works with both `tupson` and `circe` models. tupson clients use `ba.sake.sttp.tupson.asJson` natively. Generated example:
 
 ```scala
 class PetClient(baseUrl: String) {
