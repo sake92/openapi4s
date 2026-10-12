@@ -51,9 +51,35 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
     if (generatedNamedSchemas(namedSchemaName)) return List.empty
     val typeName = ScalaIdents.typeName(namedSchemaName)
     val termName = ScalaIdents.termName(namedSchemaName)
-    val generatedModelSources = namedSchemaDef.schema match {
+    val normalized = SchemaNormalizer.normalize(
+      namedSchemaDef.schema,
+      openApiDefinition.namedSchemaDefinitions.defs.map(d => d.name -> d.schema).toMap,
+      namedSchemaName
+    )
+    val liftedModels = scala.collection.mutable.ListBuffer.empty[SchemaDefinition.Named]
+    def liftOptionalObjects(schema: SchemaDefinition, path: String): SchemaDefinition = schema match {
+      case obj: SchemaDefinition.Obj if obj.properties.exists(_.schema.isInstanceOf[SchemaDefinition.Opt]) =>
+        val name = s"${namedSchemaName}__${path}"
+        liftedModels += SchemaDefinition.Named(name, obj)
+        SchemaDefinition.Ref(name)
+      case SchemaDefinition.Opt(inner) => SchemaDefinition.optional(liftOptionalObjects(inner, path))
+      case SchemaDefinition.Arr(inner, min, max, unique) =>
+        SchemaDefinition.Arr(liftOptionalObjects(inner, s"${path}__item"), min, max, unique)
+      case SchemaDefinition.AnyOf(members) =>
+        SchemaDefinition.AnyOf(members.zipWithIndex.map { case (member, index) =>
+          liftOptionalObjects(member, s"${path}__${index}")
+        })
+      case other => other
+    }
+    val renderable = normalized match {
+      case SchemaDefinition.Obj(props) =>
+        SchemaDefinition.Obj(props.map(p => p.copy(schema = liftOptionalObjects(p.schema, p.name))))
+      case other => other
+    }
+    val generatedModelSources = renderable match {
       case obj: SchemaDefinition.Obj =>
         val params = obj.properties.flatMap { property =>
+          val default = TupsonModelDefaults.optionalDefault(property.schema)
           try {
             val propertyTpe = TupsonTypeResolver.resolveType(
               property.schema,
@@ -63,7 +89,11 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
               context = s"${namedSchemaName}.${property.name}",
               fallbackAnyType = t"JValue"
             )
-            Some(param"${ScalaIdents.termName(property.name)}: ${propertyTpe}")
+            val parameter = default match {
+              case Some(default) => param"${ScalaIdents.termName(property.name)}: ${propertyTpe} = ${default}"
+              case None          => param"${ScalaIdents.termName(property.name)}: ${propertyTpe}"
+            }
+            Some(parameter)
           } catch {
             case e: UnsupportedSchemaException =>
               println(e.toString)
@@ -132,17 +162,21 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
             println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
             None
         }
-        val mergedSchemasProps: List[SchemaProperty] = allOfCases.flatMap {
-          case SchemaDefinition.Obj(props) => props
-          case other =>
-            println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
-            List.empty
-        }.foldLeft(List.empty[SchemaProperty]) { (acc, p) =>
-          if (acc.exists(_.name == p.name)) {
-            println(s"Duplicate property '${p.name}' after allOf merge [${namedSchemaName}]. Keeping the first occurrence.")
-            acc
-          } else acc :+ p
-        }
+        val mergedSchemasProps: List[SchemaProperty] = allOfCases
+          .flatMap {
+            case SchemaDefinition.Obj(props) => props
+            case other =>
+              println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+              List.empty
+          }
+          .foldLeft(List.empty[SchemaProperty]) { (acc, p) =>
+            if (acc.exists(_.name == p.name)) {
+              println(
+                s"Duplicate property '${p.name}' after allOf merge [${namedSchemaName}]. Keeping the first occurrence."
+              )
+              acc
+            } else acc :+ p
+          }
 
         generateModelSources(
           SchemaDefinition.Named(namedSchemaName, SchemaDefinition.Obj(mergedSchemasProps)),
@@ -156,7 +190,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
         List.empty
     }
     generatedNamedSchemas += namedSchemaName
-    generatedModelSources
+    generatedModelSources ++ liftedModels.toList.flatMap(model => generateModelSources(model, None))
   }
 
   private def isTypeAliasSchema(s: NameableSchemaDefinition): Boolean = s match {

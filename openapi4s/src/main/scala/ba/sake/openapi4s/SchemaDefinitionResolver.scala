@@ -176,6 +176,9 @@ class SchemaDefinitionResolver {
           .map(_.asScala.toSet)
           .getOrElse(Option(jsonSchema.getType).toSet)
         val nonNullTypes = types - "null"
+        if (types == Set("null")) {
+          throw new UnsupportedSchemaDefinitionException(s"Null is unsupported [${context}]")
+        }
         // we only handle the first type...
         nonNullTypes.headOption match {
           case Some(schemaType) =>
@@ -204,6 +207,7 @@ class SchemaDefinitionResolver {
                     aliasSchemaDefs.get(tpeName).getOrElse(SchemaDefinition.Ref(tpeName))
                   }
               }
+              .orElse(Option(schema.getProperties).map(_ => getObjectSchema(schema, context)))
               .getOrElse {
                 println(s"Unknown type at ${context}")
                 SchemaDefinition.Unknown()
@@ -337,10 +341,21 @@ class SchemaDefinitionResolver {
     SchemaDefinition.OneOf(schemas, discriminatorPropertyName = discriminatorPropertyName)
   }
 
-  private def getAnyOfSchema(schema: Schema[?], context: String): SchemaDefinition.AnyOf = {
-    val schemas =
-      Option(schema.getAnyOf).map(_.asScala).getOrElse(List.empty).map(s => resolveSchema(s, context)).toList
-    SchemaDefinition.AnyOf(schemas)
+  private def getAnyOfSchema(schema: Schema[?], context: String): SchemaDefinition = {
+    val branches = Option(schema.getAnyOf).map(_.asScala.toList).getOrElse(List.empty)
+    def isNullOnly(branch: Schema[?]): Boolean = {
+      val types = Option(branch.getTypes).map(_.asScala.toSet).getOrElse(Option(branch.getType).toSet)
+      types == Set("null")
+    }
+    val (nullBranches, valueBranches) = branches.partition(isNullOnly)
+    val resolved = valueBranches.map(s => resolveSchema(s, context))
+    if (nullBranches.nonEmpty && resolved.nonEmpty) {
+      val nonNull = resolved match {
+        case List(single) => single
+        case many         => SchemaDefinition.AnyOf(many)
+      }
+      SchemaDefinition.optional(nonNull)
+    } else SchemaDefinition.AnyOf(branches.map(s => resolveSchema(s, context)))
   }
 
   private def getAllOfSchema(schema: Schema[?], context: String): SchemaDefinition.AllOf = {
