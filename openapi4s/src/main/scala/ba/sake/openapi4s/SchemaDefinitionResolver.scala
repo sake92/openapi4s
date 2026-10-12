@@ -176,6 +176,9 @@ class SchemaDefinitionResolver {
           .map(_.asScala.toSet)
           .getOrElse(Option(jsonSchema.getType).toSet)
         val nonNullTypes = types - "null"
+        if (types == Set("null")) {
+          throw new UnsupportedSchemaDefinitionException(s"Null is unsupported [${context}]")
+        }
         // we only handle the first type...
         nonNullTypes.headOption match {
           case Some(schemaType) =>

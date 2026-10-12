@@ -4,6 +4,23 @@ import java.nio.file.{Files, Paths}
 
 class JsonSchemaDefinitionSuite extends munit.FunSuite {
 
+  test("explicit null-only schemas do not infer an object from properties") {
+    for (useTypes <- List(false, true)) {
+      val schema = new io.swagger.v3.oas.models.media.JsonSchema()
+      if (useTypes) schema.addType("null") else schema.setType("null")
+      schema.addProperty("x", new io.swagger.v3.oas.models.media.StringSchema())
+      intercept[exceptions.UnsupportedSchemaDefinitionException] {
+        new SchemaDefinitionResolver().resolveSchema(schema, "null-only")
+      }
+    }
+  }
+
+  test("properties without an explicit type still infer an object") {
+    val schema = new io.swagger.v3.oas.models.media.JsonSchema()
+    schema.addProperty("x", new io.swagger.v3.oas.models.media.StringSchema())
+    assert(new SchemaDefinitionResolver().resolveSchema(schema, "property-only").isInstanceOf[SchemaDefinition.Obj])
+  }
+
   test("parses a single JSON Schema file and promotes $defs to named schemas") {
     val definition = OpenApiDefinition.parse(TestUtils.getResourceUrl("json-schema/single/person.json"))
 

@@ -59,7 +59,12 @@ class CirceModelGenerator(
     if (generatedNamedSchemas(namedSchemaName)) return List.empty
     val typeName = ScalaIdents.typeName(namedSchemaName)
     val termName = ScalaIdents.termName(namedSchemaName)
-    val generatedModelSources = namedSchemaDef.schema match {
+    val normalized = SchemaNormalizer.normalize(
+      namedSchemaDef.schema,
+      openApiDefinition.namedSchemaDefinitions.defs.map(d => d.name -> d.schema).toMap,
+      namedSchemaName
+    )
+    val generatedModelSources = normalized match {
       case obj: SchemaDefinition.Obj =>
         val params = obj.properties.flatMap { property =>
           try {
@@ -90,26 +95,29 @@ class CirceModelGenerator(
         }
         // enums defined in-place, we invent a new name for them..
         val adHocEnums = obj.properties.flatMap { property =>
-          SchemaUtils.enumValuesOf(property.schema).map { values =>
-            val adhocEnumName = SchemaUtils.generateEnumName(namedSchemaName, property.name)
-            val adhocEnumType = Type.Name(adhocEnumName)
-            val adhocEnumTerm = Term.Name(adhocEnumName)
-            val enumCaseDefs = Defn.RepeatedEnumCase(
-              List.empty,
-              values.map { enumDefCaseValue =>
-                ScalaIdents.termName(enumDefCaseValue)
-              }
-            )
-            List(
-              q" enum ${adhocEnumType} { ${enumCaseDefs} } ",
-              q"""
+          SchemaUtils
+            .enumValuesOf(property.schema)
+            .map { values =>
+              val adhocEnumName = SchemaUtils.generateEnumName(namedSchemaName, property.name)
+              val adhocEnumType = Type.Name(adhocEnumName)
+              val adhocEnumTerm = Term.Name(adhocEnumName)
+              val enumCaseDefs = Defn.RepeatedEnumCase(
+                List.empty,
+                values.map { enumDefCaseValue =>
+                  ScalaIdents.termName(enumDefCaseValue)
+                }
+              )
+              List(
+                q" enum ${adhocEnumType} { ${enumCaseDefs} } ",
+                q"""
                 object ${adhocEnumTerm} {
                   given Configuration =  Configuration.default
                   given Codec[${adhocEnumType}] = ConfiguredEnumCodec.derived
                 }
               """
-            )
-          }.getOrElse(List.empty)
+              )
+            }
+            .getOrElse(List.empty)
         }
         val classDefinition: List[Stat] = superType match {
           case Some(st) =>
@@ -200,17 +208,21 @@ class CirceModelGenerator(
             println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
             None
         }
-        val mergedSchemasProps: List[SchemaProperty] = allOfCases.flatMap {
-          case SchemaDefinition.Obj(props) => props
-          case other =>
-            println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
-            List.empty
-        }.foldLeft(List.empty[SchemaProperty]) { (acc, p) =>
-          if (acc.exists(_.name == p.name)) {
-            println(s"Duplicate property '${p.name}' after allOf merge [${namedSchemaName}]. Keeping the first occurrence.")
-            acc
-          } else acc :+ p
-        }
+        val mergedSchemasProps: List[SchemaProperty] = allOfCases
+          .flatMap {
+            case SchemaDefinition.Obj(props) => props
+            case other =>
+              println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+              List.empty
+          }
+          .foldLeft(List.empty[SchemaProperty]) { (acc, p) =>
+            if (acc.exists(_.name == p.name)) {
+              println(
+                s"Duplicate property '${p.name}' after allOf merge [${namedSchemaName}]. Keeping the first occurrence."
+              )
+              acc
+            } else acc :+ p
+          }
         generateModelSources(
           SchemaDefinition.Named(namedSchemaName, SchemaDefinition.Obj(mergedSchemasProps)),
           superType

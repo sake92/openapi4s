@@ -51,7 +51,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
     if (generatedNamedSchemas(namedSchemaName)) return List.empty
     val typeName = ScalaIdents.typeName(namedSchemaName)
     val termName = ScalaIdents.termName(namedSchemaName)
-    val normalized = TupsonObjectIntersections.normalize(
+    val normalized = SchemaNormalizer.normalize(
       namedSchemaDef.schema,
       openApiDefinition.namedSchemaDefinitions.defs.map(d => d.name -> d.schema).toMap,
       namedSchemaName
@@ -79,6 +79,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
     val generatedModelSources = renderable match {
       case obj: SchemaDefinition.Obj =>
         val params = obj.properties.flatMap { property =>
+          val default = TupsonModelDefaults.optionalDefault(property.schema)
           try {
             val propertyTpe = TupsonTypeResolver.resolveType(
               property.schema,
@@ -88,7 +89,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
               context = s"${namedSchemaName}.${property.name}",
               fallbackAnyType = t"JValue"
             )
-            val parameter = TupsonModelDefaults.optionalDefault(property.schema) match {
+            val parameter = default match {
               case Some(default) => param"${ScalaIdents.termName(property.name)}: ${propertyTpe} = ${default}"
               case None          => param"${ScalaIdents.termName(property.name)}: ${propertyTpe}"
             }

@@ -1,12 +1,11 @@
 package ba.sake.openapi4s
-package tupson
 
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 
 /** Normalizes literal refinements expressed as object intersections. Other allOf forms retain their existing generation
   * path, including recursive OpenAPI definitions.
   */
-private[tupson] object TupsonObjectIntersections {
+private[openapi4s] object SchemaNormalizer {
   def normalize(
       schema: SchemaDefinition,
       definitions: Map[String, SchemaDefinition],
@@ -14,6 +13,36 @@ private[tupson] object TupsonObjectIntersections {
   ): SchemaDefinition = {
     def unsupported(detail: String): Nothing =
       throw new UnsupportedSchemaException(s"Unsupported object intersection at '$context': $detail")
+
+    def numeric(value: EnumLiteral): Option[BigDecimal] = value match {
+      case EnumLiteral.IntValue(n)                              => Some(BigDecimal(n))
+      case EnumLiteral.LongValue(n)                             => Some(BigDecimal(n))
+      case EnumLiteral.NumValue(n) if !n.isNaN && !n.isInfinity => Some(BigDecimal(n))
+      case _                                                    => None
+    }
+
+    def accepts(schema: SchemaDefinition, value: EnumLiteral): Boolean = schema match {
+      case SchemaDefinition.Str(_, min, max, pattern) =>
+        value match {
+          case EnumLiteral.StrValue(s) =>
+            val length = s.codePointCount(0, s.length)
+            min.forall(length >= _) && max.forall(length <= _) &&
+            pattern.forall(p => java.util.regex.Pattern.compile(p).matcher(s).find())
+          case _ => false
+        }
+      case SchemaDefinition.Int32(_, max, min) =>
+        numeric(value).exists(n => n.isWhole && n.isValidInt && max.forall(n <= _) && min.forall(n >= _))
+      case SchemaDefinition.Int64(_, max, min) =>
+        numeric(value).exists(n => n.isWhole && n.isValidLong && max.forall(n <= _) && min.forall(n >= _))
+      case SchemaDefinition.Num32(_, max, min) =>
+        numeric(value).exists(n =>
+          max.forall(m => n <= BigDecimal(m.toDouble)) && min.forall(m => n >= BigDecimal(m.toDouble))
+        )
+      case SchemaDefinition.Num64(_, max, min) =>
+        numeric(value).exists(n => max.forall(m => n <= BigDecimal(m)) && min.forall(m => n >= BigDecimal(m)))
+      case _: SchemaDefinition.Bool => value.isInstanceOf[EnumLiteral.BoolValue]
+      case _                        => false
+    }
 
     def intersect(left: SchemaDefinition, right: SchemaDefinition): SchemaDefinition = {
       if (left == right) left
@@ -30,6 +59,8 @@ private[tupson] object TupsonObjectIntersections {
           case (SchemaDefinition.Enum(_, _), c: SchemaDefinition.Const) => intersect(c, left)
           case (c: SchemaDefinition.Const, SchemaDefinition.EnumLiterals(values, _)) if values.contains(c.value) => c
           case (SchemaDefinition.EnumLiterals(_, _), c: SchemaDefinition.Const) => intersect(c, left)
+          case (c: SchemaDefinition.Const, scalar) if accepts(scalar, c.value)  => c
+          case (scalar, c: SchemaDefinition.Const) if accepts(scalar, c.value)  => c
           case _ => unsupported(s"cannot intersect $left with $right")
         }
     }

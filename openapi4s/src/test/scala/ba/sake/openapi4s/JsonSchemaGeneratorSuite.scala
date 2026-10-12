@@ -69,6 +69,20 @@ class JsonSchemaGeneratorSuite extends munit.FunSuite {
     assert(generated.contains("weight: Option[Long] = Some(1L)"), generated)
   }
 
+  test("decimal integer defaults generate exact constructor literals") {
+    val folder = schemas()
+    val path = folder.resolve("definitions.json")
+    Files.writeString(path, Files.readString(path).replace("\"default\":1", "\"default\":1.0"))
+    assert(generate(folder).contains("weight: Option[Long] = Some(1L)"))
+  }
+
+  test("invalid integer defaults fail generation instead of dropping the field") {
+    val folder = schemas()
+    val path = folder.resolve("definitions.json")
+    Files.writeString(path, Files.readString(path).replace("\"default\":1", "\"default\":1.5"))
+    intercept[exceptions.UnsupportedSchemaException] { generate(folder) }
+  }
+
   test("contradictory const intersection fails instead of dropping or widening a field") {
     intercept[exceptions.UnsupportedSchemaException] {
       generate(schemas("symbols"))
