@@ -34,8 +34,18 @@ object OpenApi4sMain {
       @arg(doc = "Comma-separated tags for the client only. Overrides --tags.")
       clientTags: String = "",
       @arg(doc = "Comma-separated tags to exclude from the client only. Overrides --excludeTags.")
-      clientExcludeTags: String = ""
+      clientExcludeTags: String = "",
+      @arg(doc = "Log level: trace, debug, info, warn, error or off. Default is info; logs go to stderr.")
+      logLevel: String = "info"
   ) = {
+    val normalizedLogLevel = logLevel.toLowerCase(java.util.Locale.ROOT)
+    val logLevels = Set("trace", "debug", "info", "warn", "error", "off")
+    require(
+      logLevels.contains(normalizedLogLevel),
+      s"Invalid --log-level '$logLevel'. Expected: trace, debug, info, warn, error or off."
+    )
+    // Configure the backend before any generator logger is initialized.
+    System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", normalizedLogLevel)
     val (modelsResolved, frameworkResolved, clientResolved) = resolveBackends(models, framework, client)
     val writer = OpenApiWriter(
       config = OpenApiWriter.Config(
