@@ -1,5 +1,7 @@
 package ba.sake.openapi4s
 
+import com.typesafe.scalalogging.LazyLogging
+
 import java.net.URI
 import java.nio.file.{Files, Path, Paths}
 import scala.jdk.CollectionConverters._
@@ -11,7 +13,7 @@ import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.parser.util.OpenAPIDeserializer
 
 /** Adapts local JSON Schema documents to the generator's model-only input. */
-object JsonSchemaDefinition {
+object JsonSchemaDefinition extends LazyLogging {
 
   private case class Document(path: Path, rootName: String, root: JsonNode, definitions: Map[String, JsonNode])
 
@@ -212,7 +214,7 @@ object JsonSchemaDefinition {
     if (schema == null) {
       throw new RuntimeException(s"Could not parse JSON Schema '$name': ${result.getMessages.asScala.mkString("; ")}")
     }
-    result.getMessages.asScala.foreach(message => println(s"JSON Schema '$name' had parser issue: $message"))
+    result.getMessages.asScala.foreach(message => logger.warn(s"JSON Schema '$name' had parser issue: $message"))
     schema
   }
 

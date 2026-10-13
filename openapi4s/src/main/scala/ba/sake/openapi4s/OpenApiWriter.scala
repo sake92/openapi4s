@@ -1,5 +1,7 @@
 package ba.sake.openapi4s
 
+import com.typesafe.scalalogging.LazyLogging
+
 import java.nio.file.Path
 import ba.sake.regenesca.{GeneratedFileSource, RegenescaGenerator, SourceMerger}
 import scala.meta.contrib.implicits.TreeExtensions
@@ -11,13 +13,13 @@ class OpenApiWriter(
     frameworkBackend: FrameworkBackend,
     validationBackend: ValidationBackend,
     clientBackend: ClientBackend
-) {
+) extends LazyLogging {
   private val openapiDefinition = OpenApiDefinition.parse(config.url)
   private val merger = SourceMerger(mergeDefBodies = true)
   private val regenescaGenerator = RegenescaGenerator(merger)
 
   def write(): Seq[GeneratedFileSource] = {
-    println(
+    logger.debug(
       s"Started generating OpenApi for '${config.url}' with models='${config.models}', framework='${config.framework}', validation='${config.validation}', client='${config.client}' ..."
     )
     val (validationSources, validationTypeMap) = validationBackend.generate(config, openapiDefinition)
@@ -40,14 +42,14 @@ class OpenApiWriter(
       gsf.copy(file = config.baseFolder.resolve(packagePath).resolve(gsf.file.toString))
     }
     regenescaGenerator.generate(adaptedGenSourceFiles)
-    println(
+    logger.debug(
       s"Finished generating OpenApi for '${config.url}' with models='${config.models}', framework='${config.framework}', client='${config.client}'."
     )
     adaptedGenSourceFiles
   }
 }
 
-object OpenApiWriter {
+object OpenApiWriter extends LazyLogging {
 
   private val modelBackends = ModelBackend.byId
   private val frameworkBackends = FrameworkBackend.byId
@@ -81,16 +83,16 @@ object OpenApiWriter {
     val clientBackend = clientBackends(clientId)
 
     if (!frameworkBackend.supportedModelIds.contains(modelBackend.id)) {
-      System.err.println(
-        s"WARNING: potentially incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
+      logger.warn(
+        s"Potentially incompatible backend combination: models='${config.models}', framework='${config.framework}'. " +
           s"Framework '${frameworkBackend.id}' may not fully support model backend '${modelBackend.id}'. " +
           s"Generated sources may require manual import/type adjustments; prefer compatible model/framework combinations when possible."
       )
     }
 
     if (!clientBackend.supportedModelIds.contains(modelBackend.id)) {
-      System.err.println(
-        s"WARNING: potentially incompatible backend combination: models='${config.models}', client='${config.client}'. " +
+      logger.warn(
+        s"Potentially incompatible backend combination: models='${config.models}', client='${config.client}'. " +
           s"Client '${clientBackend.id}' may not fully support model backend '${modelBackend.id}'. " +
           s"Generated sources may require manual import/type adjustments; prefer compatible model/client combinations when possible."
       )
@@ -125,7 +127,9 @@ object OpenApiWriter {
       clientExcludeTags: Option[List[String]] = None
   )
 
-  /** Keeps only path definitions whose tag is in `include` (if set) and not in `exclude` (exclude wins). Case-insensitive. */
+  /** Keeps only path definitions whose tag is in `include` (if set) and not in `exclude` (exclude wins).
+    * Case-insensitive.
+    */
   private[openapi4s] def filterByTags(
       definition: OpenApiDefinition,
       include: Option[List[String]],

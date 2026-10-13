@@ -1,6 +1,8 @@
 package ba.sake.openapi4s
 package sttp
 
+import com.typesafe.scalalogging.LazyLogging
+
 import java.nio.file.Paths
 import scala.collection.mutable
 import scala.meta._
@@ -21,7 +23,8 @@ class SttpClientGenerator(
     config: OpenApiWriter.Config,
     openApiDefinition: OpenApiDefinition,
     modelContract: ModelContract
-) extends OpenApiGenerator {
+) extends OpenApiGenerator
+    with LazyLogging {
 
   override def generate(): Seq[GeneratedFileSource] = {
     val groupedByTag = openApiDefinition.pathDefinitions.defs.groupBy(_.getTag)
@@ -137,7 +140,7 @@ class SttpClientGenerator(
         Some((resolveBodyParamName(body.schema), tpe))
       } catch {
         case e: UnsupportedSchemaException =>
-          println(e.toString)
+          logger.warn(e.toString)
           None
       }
     }
@@ -179,7 +182,7 @@ class SttpClientGenerator(
     pathDef.resBody match {
       case Some(_) => q"asJson[${responseType(pathDef)}]"
       // plain asString errors on String, so map through ResponseException explicitly
-      case None    => q"asString.mapWithMetadata(ResponseAs.deserializeRightCatchingExceptions(_ => ${Lit.Unit()}))"
+      case None => q"asString.mapWithMetadata(ResponseAs.deserializeRightCatchingExceptions(_ => ${Lit.Unit()}))"
     }
   }
 
@@ -197,7 +200,7 @@ class SttpClientGenerator(
           )
         } catch {
           case e: UnsupportedSchemaException =>
-            println(e.toString)
+            logger.warn(e.toString)
             t"String"
         }
       case None => t"Unit"
@@ -235,7 +238,7 @@ class SttpClientGenerator(
       )
     } catch {
       case e: UnsupportedSchemaException =>
-        println(e.toString)
+        logger.warn(e.toString)
         Some(t"String")
     }
   }

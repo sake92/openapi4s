@@ -1,5 +1,7 @@
 package ba.sake.openapi4s
 
+import com.typesafe.scalalogging.LazyLogging
+
 import ba.sake.openapi4s.exceptions.{UnsupportedSchemaDefinitionException, UnsupportedSchemaException}
 
 import scala.annotation.tailrec
@@ -8,7 +10,7 @@ import io.swagger.v3.oas.models.Paths
 
 class PathDefinitionsResolver(
     schemaDefinitionResolver: SchemaDefinitionResolver
-) {
+) extends LazyLogging {
 
   private val ApplicationJson = "application/json"
 
@@ -38,7 +40,7 @@ class PathDefinitionsResolver(
                       )
                     )
                   } else {
-                    println(
+                    logger.warn(
                       s"Request body schema '${bodySchema}' not allowed (probably an unnamed object) " +
                         s"at path ${method} '${pathKey}'. Skipping."
                     )
@@ -69,7 +71,7 @@ class PathDefinitionsResolver(
                       if (isAllowedBodySchema(bodySchema))
                         Some(ResBodyDefinition(schema = bodySchema))
                       else {
-                        println(
+                        logger.warn(
                           s"Response body schema '${bodySchema}' not allowed (probably an unnamed object) at path ${method} '${pathKey}'. Skipping."
                         )
                         None
@@ -110,7 +112,7 @@ class PathDefinitionsResolver(
                     .reverse
                   val pathParamSchema = pathParamsMap.getOrElse(
                     pathParamName, {
-                      println(
+                      logger.warn(
                         s"Path param '${pathParamName}' is in the path template '${pathKey}' " +
                           s"but missing from the parameters list. Defaulting to Str."
                       )
@@ -138,7 +140,7 @@ class PathDefinitionsResolver(
                   if (isAllowedQueryParamSchema(paramSchema))
                     Some(QueryParam(param.getName, paramSchema, Option(param.getRequired).exists(_.booleanValue)))
                   else {
-                    println(
+                    logger.warn(
                       s"Query param schema not allowed: ${paramSchema} (probably an unnamed object). " +
                         s"Param name: ${param.getName} in ${method} ${pathKey}. Skipping."
                     )
@@ -162,7 +164,7 @@ class PathDefinitionsResolver(
                   if (isAllowedQueryParamSchema(paramSchema))
                     Some(HeaderParam(param.getName, paramSchema, Option(param.getRequired).exists(_.booleanValue)))
                   else {
-                    println(
+                    logger.warn(
                       s"Header param schema not allowed: ${paramSchema} (probably an unnamed object). " +
                         s"Param name: ${param.getName} in ${method} ${pathKey}. Skipping."
                     )

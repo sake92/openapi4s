@@ -1,6 +1,8 @@
 package ba.sake.openapi4s
 package http4s
 
+import com.typesafe.scalalogging.LazyLogging
+
 import java.nio.file.Paths
 import scala.meta._
 import scala.meta.dialects.Scala34
@@ -13,7 +15,8 @@ class Http4sGenerator(
     config: OpenApiWriter.Config,
     openApiDefinition: OpenApiDefinition,
     frameworkModelImports: List[Import]
-) extends OpenApiGenerator {
+) extends OpenApiGenerator
+    with LazyLogging {
 
   override def generate(): Seq[GeneratedFileSource] = {
     val groupedByTag = openApiDefinition.pathDefinitions.defs.groupBy(_.getTag)
@@ -44,7 +47,7 @@ class Http4sGenerator(
             Pat.Var(ScalaIdents.termName(name))
           } catch {
             case e: UnsupportedSchemaException =>
-              println(e.toString)
+              logger.warn(e.toString)
               Pat.Var(ScalaIdents.termName(name))
           }
       }
@@ -94,7 +97,7 @@ class Http4sGenerator(
               Some((param"${qpName}: ${finalTpe}", adhocEnumOpt))
             } catch {
               case e: UnsupportedSchemaException =>
-                println(e.toString)
+                logger.warn(e.toString)
                 None
             }
           }.unzip
@@ -125,7 +128,7 @@ class Http4sGenerator(
           Some(enumerator"reqBody <- req.as[${tpe}]")
         } catch {
           case e: UnsupportedSchemaException =>
-            println(e.toString)
+            logger.warn(e.toString)
             None
         }
       }.toList
@@ -144,7 +147,7 @@ class Http4sGenerator(
             Some(enumerator" resp <- NotImplemented(${todoBody}) ")
           } catch {
             case e: UnsupportedSchemaException =>
-              println(e.toString)
+              logger.warn(e.toString)
               None
           }
         }

@@ -1,6 +1,8 @@
 package ba.sake.openapi4s
 package sharaf
 
+import com.typesafe.scalalogging.LazyLogging
+
 import java.nio.file.Paths
 import scala.meta._
 import scala.meta.dialects.Scala34
@@ -14,7 +16,8 @@ class SharafGenerator(
     config: OpenApiWriter.Config,
     openApiDefinition: OpenApiDefinition,
     frameworkModelImports: List[Import]
-) extends OpenApiGenerator {
+) extends OpenApiGenerator
+    with LazyLogging {
 
   override def generate(): Seq[GeneratedFileSource] = {
     val groupedByTag = openApiDefinition.pathDefinitions.defs.groupBy(_.getTag)
@@ -68,7 +71,7 @@ class SharafGenerator(
                 else p"param[${tpe}]($paramName)"
               } catch {
                 case e: UnsupportedSchemaException =>
-                  println(e.toString)
+                  logger.warn(e.toString)
                   Pat.Var(ScalaIdents.termName(name))
               }
           }
@@ -105,7 +108,7 @@ class SharafGenerator(
               Some((param"${qpName}: ${finalTpe}", adhocEnumOpt))
             } catch {
               case e: UnsupportedSchemaException =>
-                println(e.toString)
+                logger.warn(e.toString)
                 None
             }
           }.unzip
@@ -136,7 +139,7 @@ class SharafGenerator(
           Some(q"val reqBody = Request.current.bodyJsonValidated[${tpe}]")
         } catch {
           case e: UnsupportedSchemaException =>
-            println(e.toString)
+            logger.warn(e.toString)
             None
         }
       }.toList
@@ -155,7 +158,7 @@ class SharafGenerator(
             Some(q"""Response.withStatus(StatusCode.NotImplemented).withBody(${todoBody})""")
           } catch {
             case e: UnsupportedSchemaException =>
-              println(e.toString)
+              logger.warn(e.toString)
               None
           }
         }

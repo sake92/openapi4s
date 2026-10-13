@@ -21,15 +21,7 @@ class SharafGeneratorSuite extends munit.FunSuite {
       modelImportContract.frameworkImportsById(FrameworkBackendId.Sharaf)
     )
     val sources = generator.generate()
-    println("*" * 100)
-    println("Generated Sharaf sources for petstore_3.0.0.json :")
-    sources.foreach { source =>
-      println("*" * 50)
-      print("*" * 20)
-      print(source.file.getFileName)
-      println("*" * 20)
-      println(source.source.syntax)
-    }
+    TestUtils.printGeneratedSources("Sharaf sources for petstore_3.0.0.json", sources)
   }
 
   test("generate() should generate from oneOf.yaml") {
@@ -48,15 +40,7 @@ class SharafGeneratorSuite extends munit.FunSuite {
       modelImportContract.frameworkImportsById(FrameworkBackendId.Sharaf)
     )
     val sources = generator.generate()
-    println("*" * 100)
-    println("Generated Sharaf sources for oneOf.yaml :")
-    sources.foreach { source =>
-      println("*" * 50)
-      print("*" * 20)
-      print(source.file.getFileName)
-      println("*" * 20)
-      println(source.source.syntax)
-    }
+    TestUtils.printGeneratedSources("Sharaf sources for oneOf.yaml", sources)
   }
 
   test("generate() should generate from spring_petclinic.yaml") {
@@ -75,14 +59,6 @@ class SharafGeneratorSuite extends munit.FunSuite {
       modelImportContract.frameworkImportsById(FrameworkBackendId.Sharaf)
     )
     val sources = generator.generate()
-    println("*" * 100)
-    println("Generated Sharaf sources for spring_petclinic.yaml :")
-    sources.foreach { source =>
-      println("*" * 50)
-      print("*" * 20)
-      print(source.file.getFileName)
-      println("*" * 20)
-      println(source.source.syntax)
-    }
+    TestUtils.printGeneratedSources("Sharaf sources for spring_petclinic.yaml", sources)
   }
 }

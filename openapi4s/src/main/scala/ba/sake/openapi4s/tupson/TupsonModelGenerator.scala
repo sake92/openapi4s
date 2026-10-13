@@ -1,6 +1,8 @@
 package ba.sake.openapi4s
 package tupson
 
+import com.typesafe.scalalogging.LazyLogging
+
 import java.nio.file.Paths
 import scala.meta._
 import scala.meta.dialects.Scala34
@@ -9,7 +11,8 @@ import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 import ba.sake.openapi4s.validson.ValidsonUtils
 
 class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: OpenApiDefinition)
-    extends OpenApiGenerator {
+    extends OpenApiGenerator
+    with LazyLogging {
 
   // keep track of done schemas (to avoid generating a subtype multiple times)
   private var generatedNamedSchemas = Set.empty[String]
@@ -27,7 +30,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
     val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
       val namedSchemaName = namedSchemaDef.name.capitalize
       if (!generatedFileNames.add(namedSchemaName)) {
-        println(s"Duplicate model file name '${namedSchemaName}'. Skipping the model.")
+        logger.warn(s"Duplicate model file name '${namedSchemaName}'. Skipping the model.")
         None
       } else {
         val modelSources = generateModelSources(namedSchemaDef, None)
@@ -96,7 +99,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
             Some(parameter)
           } catch {
             case e: UnsupportedSchemaException =>
-              println(e.toString)
+              logger.warn(e.toString)
               None
           }
         }
@@ -129,17 +132,17 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
             openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName) match {
               case Some(referencedNamedSchema) => generateModelSources(referencedNamedSchema, Some(typeName))
               case None =>
-                println(s"Non-existing sub-schema type: '${refName}' [${namedSchemaName}]")
+                logger.warn(s"Non-existing sub-schema type: '${refName}' [${namedSchemaName}]")
                 None
             }
           case other =>
-            println(s"Unsupported oneOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+            logger.warn(s"Unsupported oneOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
             None
         }
         // subtypes are generated at package level, so that they can be referenced
         // by other schemas too (e.g. union type aliases)
         if (oneOfCases.isEmpty) {
-          println(s"OneOf without supported sub-schemas at '${namedSchemaName}'. Skipping the model.")
+          logger.warn(s"OneOf without supported sub-schemas at '${namedSchemaName}'. Skipping the model.")
           List.empty
         } else {
           List(
@@ -159,19 +162,19 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
             openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName).map(_.schema)
           case obj: SchemaDefinition.Obj => Some(obj)
           case other =>
-            println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+            logger.warn(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
             None
         }
         val mergedSchemasProps: List[SchemaProperty] = allOfCases
           .flatMap {
             case SchemaDefinition.Obj(props) => props
             case other =>
-              println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+              logger.warn(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
               List.empty
           }
           .foldLeft(List.empty[SchemaProperty]) { (acc, p) =>
             if (acc.exists(_.name == p.name)) {
-              println(
+              logger.warn(
                 s"Duplicate property '${p.name}' after allOf merge [${namedSchemaName}]. Keeping the first occurrence."
               )
               acc
@@ -186,7 +189,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
         // TODO type alias ???
         List.empty
       case other =>
-        println(s"Unsupported named schema type for tupson: '${other.getClass.getSimpleName}' [${namedSchemaName}]")
+        logger.warn(s"Unsupported named schema type for tupson: '${other.getClass.getSimpleName}' [${namedSchemaName}]")
         List.empty
     }
     generatedNamedSchemas += namedSchemaName
