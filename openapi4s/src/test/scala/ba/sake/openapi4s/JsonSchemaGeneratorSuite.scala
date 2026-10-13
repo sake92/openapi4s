@@ -60,7 +60,7 @@ class JsonSchemaGeneratorSuite extends munit.FunSuite {
 
   test("nullable referenced object stays typed instead of generic JSON") {
     val generated = generate(schemas())
-    assert(generated.contains("files: Option[Definitions__ScopeReport]"), generated)
+    assert(generated.contains("files: Option[ScopeReport]"), generated)
     assert(!generated.contains("Option[JValue]"), generated)
   }
 

@@ -25,7 +25,7 @@ class JsonSchemaDefinitionSuite extends munit.FunSuite {
     val definition = OpenApiDefinition.parse(TestUtils.getResourceUrl("json-schema/single/person.json"))
 
     assertEquals(definition.pathDefinitions.defs, List.empty)
-    assertEquals(definition.namedSchemaDefinitions.defs.map(_.name).toSet, Set("Person", "Person__Status"))
+    assertEquals(definition.namedSchemaDefinitions.defs.map(_.name).toSet, Set("Person", "Status"))
   }
 
   test("parses a JSON Schema directory and resolves references between files") {
@@ -35,6 +35,76 @@ class JsonSchemaDefinitionSuite extends munit.FunSuite {
 
     assertEquals(definition.namedSchemaDefinitions.defs.map(_.name).toSet, Set("Address", "Customer"))
     assert(customer.schema.toString.contains("Ref(Address)"))
+  }
+
+  test("qualifies colliding definitions and preserves local and cross-file references") {
+    val folder = Files.createTempDirectory("json-schema-names")
+    Files.writeString(
+      folder.resolve("first.json"),
+      """{
+      "title":"First", "type":"object", "required":["node","root","unique"], "properties":{
+        "node":{"$ref":"#/$defs/fileNode"},
+        "root":{"$ref":"#/$defs/second"},
+        "unique":{"$ref":"#/$defs/First__fileNode"}
+      }, "$defs":{
+        "fileNode":{"type":"object","properties":{"local":{"$ref":"#/$defs/declarationSurface"}}},
+        "second":{"type":"object"},
+        "First__fileNode":{"type":"object"},
+        "declarationSurface":{"type":"object"}
+      }
+    }"""
+    )
+    Files.writeString(
+      folder.resolve("second.json"),
+      """{
+      "title":"Second", "type":"object", "required":["node","other"], "properties":{
+        "node":{"$ref":"#/$defs/FileNode"},
+        "other":{"$ref":"first.json#/$defs/fileNode"}
+      }, "$defs":{"FileNode":{"type":"object"}}
+    }"""
+    )
+    val definitions =
+      JsonSchemaDefinition.parse(folder.toString).namedSchemaDefinitions.defs.map(d => d.name -> d.schema).toMap
+    assertEquals(
+      definitions.keySet,
+      Set(
+        "First",
+        "Second",
+        "First__fileNode",
+        "Second__FileNode",
+        "First__second",
+        "First__First__fileNode",
+        "DeclarationSurface"
+      )
+    )
+    def reference(model: String, property: String): SchemaDefinition = definitions(model) match {
+      case SchemaDefinition.Obj(properties) => properties.find(_.name == property).get.schema
+      case other                            => fail(s"Expected object, got $other")
+    }
+    assertEquals(reference("First", "node"), SchemaDefinition.Ref("First__fileNode"))
+    assertEquals(reference("First", "root"), SchemaDefinition.Ref("First__second"))
+    assertEquals(reference("First", "unique"), SchemaDefinition.Ref("First__First__fileNode"))
+    assertEquals(reference("Second", "node"), SchemaDefinition.Ref("Second__FileNode"))
+    assertEquals(reference("Second", "other"), SchemaDefinition.Ref("First__fileNode"))
+    assertEquals(
+      reference("First__fileNode", "local"),
+      SchemaDefinition.Opt(SchemaDefinition.Ref("DeclarationSurface"))
+    )
+  }
+
+  test("rejects component collisions that remain after qualification") {
+    val folder = Files.createTempDirectory("json-schema-name-conflict")
+    Files.writeString(
+      folder.resolve("first.json"),
+      """{
+      "title":"First", "$defs":{"node":{"type":"object"}}
+    }"""
+    )
+    Files.writeString(folder.resolve("node.json"), """{"title":"Node","type":"object"}""")
+    Files.writeString(folder.resolve("qualified.json"), """{"title":"First__node","type":"object"}""")
+    interceptMessage[RuntimeException]("JSON Schema component names must be unique; duplicates: First__node.") {
+      JsonSchemaDefinition.parse(folder.toString)
+    }
   }
 
   test("parses Snowplow self-describing object schemas") {

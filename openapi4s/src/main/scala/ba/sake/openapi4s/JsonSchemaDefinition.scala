@@ -34,11 +34,7 @@ object JsonSchemaDefinition {
     ensureUniqueNames(documents)
 
     val rootNames = documents.map(document => document.path -> document.rootName).toMap
-    val definitionNames: Map[(Path, String), String] = documents.flatMap { document =>
-      document.definitions.keys.map { key =>
-        (document.path, s"/$$defs/${escapeJsonPointer(key)}") -> s"${document.rootName}__${key}"
-      }
-    }.toMap
+    val definitionNames = assignDefinitionNames(documents, rootNames.values.toList)
     ensureUniqueComponentNames(rootNames.values.toList ++ definitionNames.values.toList)
 
     val components: Map[String, Schema[?]] = documents.flatMap { document =>
@@ -123,12 +119,41 @@ object JsonSchemaDefinition {
   }
 
   private def ensureUniqueComponentNames(names: List[String]): Unit = {
-    val duplicates = names.groupBy(identity).collect { case (name, occurrences) if occurrences.size > 1 => name }
+    val duplicates = names.groupBy(_.capitalize).collect { case (name, occurrences) if occurrences.size > 1 => name }
     if (duplicates.nonEmpty) {
       throw new RuntimeException(
         s"JSON Schema component names must be unique; duplicates: ${duplicates.toList.sorted.mkString(", ")}."
       )
     }
+  }
+
+  private def assignDefinitionNames(documents: List[Document], rootNames: List[String]): Map[(Path, String), String] = {
+    val entries = documents.flatMap { document =>
+      document.definitions.keys.map { key =>
+        val pointer = document.path -> s"/$$defs/${escapeJsonPointer(key)}"
+        (pointer, key.capitalize, s"${document.rootName}__${key}".capitalize)
+      }
+    }
+    val fallbackNames = entries.map { case (pointer, _, fallback) => pointer -> fallback }.toMap
+    val initialNames = entries.map { case (pointer, name, _) => pointer -> name }.toMap
+
+    // Compare the names emitted by both backends, including capitalization. A fallback
+    // can itself collide with a short name, so qualify those definitions on the next pass.
+    @scala.annotation.tailrec
+    def qualifyCollisions(names: Map[(Path, String), String]): Map[(Path, String), String] = {
+      val duplicates = (rootNames ++ names.values)
+        .groupBy(_.capitalize)
+        .collect {
+          case (name, occurrences) if occurrences.size > 1 => name
+        }
+        .toSet
+      val qualified = names.map { case (pointer, name) =>
+        pointer -> (if (duplicates(name.capitalize)) fallbackNames(pointer) else name)
+      }
+      if (qualified == names) names else qualifyCollisions(qualified)
+    }
+
+    qualifyCollisions(initialNames)
   }
 
   private def rewriteRefs(
