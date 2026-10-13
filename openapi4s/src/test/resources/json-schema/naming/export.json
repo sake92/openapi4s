@@ -1,0 +1,11 @@
+{
+  "title": "ExportGraph",
+  "type": "object",
+  "required": ["files"],
+  "properties": {
+    "files": {
+      "type": "array",
+      "items": { "$ref": "definitions.json#/$defs/fileNode" }
+    }
+  }
+}
