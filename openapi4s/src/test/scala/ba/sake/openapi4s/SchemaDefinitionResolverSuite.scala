@@ -10,7 +10,6 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
 
   test("SchemaDefinitionResolver should resolve petstore.json named schemas") {
     val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("petstore.json"))
-    // pprint.pprintln(openApiDefinition)
     assertEquals(
       openApiDefinition.namedSchemaDefinitions.defs.map(_.name),
       Seq("Pet", "Category", "Address", "User", "Order", "ApiResponse", "Tag", "Customer")
@@ -36,7 +35,6 @@ class SchemaDefinitionResolverSuite extends munit.FunSuite {
 
   test("SchemaDefinitionResolver should resolve oneOf.yaml named schemas") {
     val openApiDefinition = OpenApiDefinition.parse(TestUtils.getResourceUrl("oneOf.yaml"))
-    // pprint.pprintln(openApiDefinition)
   }
 
   test("SchemaDefinitionResolver should resolve tupson_features.yaml named schemas") {

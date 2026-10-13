@@ -1,5 +1,7 @@
 package ba.sake.openapi4s
 
+import com.typesafe.scalalogging.LazyLogging
+
 import scala.jdk.CollectionConverters._
 import io.swagger.parser.OpenAPIParser
 
@@ -7,7 +9,7 @@ case class OpenApiDefinition(
     namedSchemaDefinitions: NamedSchemaDefinitions,
     pathDefinitions: PathDefinitions,
     servers: List[String] = List.empty
-) {
+) extends LazyLogging {
   // make OneOf-s come first!
   def normalized: OpenApiDefinition = {
     val sortedDefs = namedSchemaDefinitions.defs.sortWith { (a, b) =>
@@ -22,7 +24,7 @@ case class OpenApiDefinition(
   }
 }
 
-object OpenApiDefinition {
+object OpenApiDefinition extends LazyLogging {
 
   def parse(url: String): OpenApiDefinition = {
     if (JsonSchemaDefinition.isInput(url)) JsonSchemaDefinition.parse(url)
@@ -42,7 +44,7 @@ object OpenApiDefinition {
     } else {
       errorMessagesOpt.foreach { errorMessages =>
         val msgs = errorMessages.mkString("; ")
-        println(s"OpenAPI definition at '${url}' had issues: ${msgs}")
+        logger.warn(s"OpenAPI definition at '${url}' had issues: ${msgs}")
       }
       val schemaDefinitionResolver = new SchemaDefinitionResolver()
       val namedSchemaDefinitions = Option(openApi.getComponents) match {

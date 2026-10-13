@@ -1,11 +1,13 @@
 package ba.sake.openapi4s
 package tupson
 
+import com.typesafe.scalalogging.LazyLogging
+
 import scala.meta._
 import scala.meta.dialects.Scala34
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaException
 
-object TupsonTypeResolver {
+object TupsonTypeResolver extends LazyLogging {
 
   def resolveType(
       schemaDef: SchemaDefinition,
@@ -46,8 +48,10 @@ object TupsonTypeResolver {
   private def namedTupleType(obj: SchemaDefinition.Obj, context: String, fallbackAnyType: Type): Type = {
     val invalidName = obj.properties.find(p => !IdentifierRegex.matches(p.name))
     if (obj.properties.isEmpty || invalidName.isDefined || obj.properties.size > MaxNamedTupleFields) {
-      println(
-        s"Cannot render anonymous object as named tuple (${invalidName.map(_.name).getOrElse(s"${obj.properties.size} fields")}) [$context]. Falling back to ${fallbackAnyType.syntax}"
+      logger.warn(
+        s"Cannot render anonymous object as named tuple (${invalidName
+            .map(_.name)
+            .getOrElse(s"${obj.properties.size} fields")}) [$context]. Falling back to ${fallbackAnyType.syntax}"
       )
       fallbackAnyType
     } else {
@@ -76,22 +80,22 @@ object TupsonTypeResolver {
 
   private def unionType(schemas: List[SchemaDefinition], context: String, fallbackAnyType: Type): Type =
     schemas match {
-      case Nil => fallbackAnyType
+      case Nil      => fallbackAnyType
       case h :: Nil => resolveType(h, None, None, allowNullable = true, context, fallbackAnyType)
       case multiple =>
         val resolved = multiple.flatMap { s =>
           try Some(resolveType(s, None, None, allowNullable = true, context, fallbackAnyType))
           catch {
             case e: UnsupportedSchemaException =>
-              println(
+              logger.warn(
                 s"Unsupported union member [${context}]: ${e.getMessage}. Falling back to ${fallbackAnyType.syntax}"
               )
               None
           }
         }
         resolved match {
-          case Nil            => fallbackAnyType
-          case h :: Nil       => h
+          case Nil      => fallbackAnyType
+          case h :: Nil => h
           case many =>
             many.reduceLeft[Type] { (acc, tpe) => t"$acc | $tpe" }
         }

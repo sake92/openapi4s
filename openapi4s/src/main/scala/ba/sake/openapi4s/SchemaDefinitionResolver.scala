@@ -1,12 +1,14 @@
 package ba.sake.openapi4s
 
+import com.typesafe.scalalogging.LazyLogging
+
 import scala.jdk.CollectionConverters._
 import io.swagger.v3.oas.models.media._
 import ba.sake.openapi4s.exceptions.UnsupportedSchemaDefinitionException
 
 // https://swagger.io/docs/specification/v3_0/data-models/data-types
 // https://github.com/swagger-api/swagger-core/tree/v2.2.27/modules/swagger-models/src/main/java/io/swagger/v3/oas/models/media
-class SchemaDefinitionResolver {
+class SchemaDefinitionResolver extends LazyLogging {
 
   // named schemas that don't get their own generated model:
   // $refs to these names resolve to the mapped SchemaDefinition instead
@@ -24,7 +26,7 @@ class SchemaDefinitionResolver {
       namedDefsMemo.getOrElseUpdate(
         name, {
           if (inProgress.contains(name)) {
-            println(s"Circular named schema reference at '${name}'. Returning Unknown schema.")
+            logger.warn(s"Circular named schema reference at '${name}'. Returning Unknown schema.")
             SchemaDefinition.Unknown()
           } else {
             schemas.get(name) match {
@@ -61,7 +63,7 @@ class SchemaDefinitionResolver {
         case Some(SchemaDefinition.Ref(r)) if schemas.contains(r) && !seen.contains(r) =>
           resolveAliasChain(r, seen + name)
         case Some(SchemaDefinition.Ref(r)) if seen.contains(r) =>
-          println(s"Circular alias reference at '${name}'. Returning Unknown schema.")
+          logger.warn(s"Circular alias reference at '${name}'. Returning Unknown schema.")
           SchemaDefinition.Unknown()
         case Some(SchemaDefinition.Ref(r)) => SchemaDefinition.Ref(r)
         case Some(other)                   => other
@@ -87,13 +89,13 @@ class SchemaDefinitionResolver {
           case anyOf: SchemaDefinition.AnyOf       => Some(SchemaDefinition.Named(schemaKey, anyOf))
           case allOf: SchemaDefinition.AllOf       => Some(SchemaDefinition.Named(schemaKey, allOf))
           case other =>
-            println(
+            logger.warn(
               s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!!"
             )
             None
         }
       } else {
-        println(
+        logger.warn(
           s"Unsupported named schema at ${schemaKey} [${schemaDef}]. Skipping the model. This may cause cascading failures!!!"
         )
         None
@@ -124,7 +126,7 @@ class SchemaDefinitionResolver {
     case SchemaDefinition.Ref(name) =>
       aliasSchemaDefs.get(name) match {
         case Some(_) if seenAliases.contains(name) =>
-          println(s"Circular alias reference at '${name}'. Returning Unknown schema.")
+          logger.warn(s"Circular alias reference at '${name}'. Returning Unknown schema.")
           SchemaDefinition.Unknown()
         case Some(aliasDef) =>
           normalize(aliasDef, seenAliases + name)
@@ -137,7 +139,7 @@ class SchemaDefinitionResolver {
   def resolveSchema(schema: Schema[?], context: String): SchemaDefinition = {
     Option(schema) match {
       case None =>
-        println(s"Null schema at ${context}. Returning Unknown schema.")
+        logger.warn(s"Null schema at ${context}. Returning Unknown schema.")
         SchemaDefinition.Unknown()
       case Some(schema) =>
         val defaultValue = Option(schema.getDefault).map(_.toString)
@@ -167,7 +169,7 @@ class SchemaDefinitionResolver {
         getObjectSchema(schema, context)
       case _: ComposedSchema =>
         getComposedSchema(schema, context).getOrElse {
-          println(s"Unsupported composed schema at ${context}. Returning Unknown schema.")
+          logger.warn(s"Unsupported composed schema at ${context}. Returning Unknown schema.")
           SchemaDefinition.Unknown()
         }
       // OpenApi 3.1 complicates this a bit
@@ -209,7 +211,7 @@ class SchemaDefinitionResolver {
               }
               .orElse(Option(schema.getProperties).map(_ => getObjectSchema(schema, context)))
               .getOrElse {
-                println(s"Unknown type at ${context}")
+                logger.warn(s"Unknown type at ${context}")
                 SchemaDefinition.Unknown()
               }
         }
@@ -220,7 +222,7 @@ class SchemaDefinitionResolver {
             aliasSchemaDefs.get(tpeName).getOrElse(SchemaDefinition.Ref(tpeName))
           }
           .getOrElse {
-            println(s"Unknown type at ${context} (${schema.getClass})")
+            logger.warn(s"Unknown type at ${context} (${schema.getClass})")
             SchemaDefinition.Unknown()
           }
 
@@ -320,7 +322,7 @@ class SchemaDefinitionResolver {
       .toList
       .foldLeft(List.empty[SchemaProperty]) { (acc, p) =>
         if (acc.exists(_.name == p.name)) {
-          println(s"Duplicate property '${p.name}' at ${context}. Keeping the first occurrence.")
+          logger.warn(s"Duplicate property '${p.name}' at ${context}. Keeping the first occurrence.")
           acc
         } else acc :+ p
       }
@@ -390,7 +392,9 @@ class SchemaDefinitionResolver {
     case f: java.lang.Float       => EnumLiteral.NumValue(f.doubleValue)
     case bd: java.math.BigDecimal => EnumLiteral.NumValue(bd.doubleValue)
     case other =>
-      println(s"Unsupported enum/const literal value: '${other}' (${other.getClass}). Treating it as a string literal.")
+      logger.warn(
+        s"Unsupported enum/const literal value: '${other}' (${other.getClass}). Treating it as a string literal."
+      )
       EnumLiteral.StrValue(other.toString)
   }
 

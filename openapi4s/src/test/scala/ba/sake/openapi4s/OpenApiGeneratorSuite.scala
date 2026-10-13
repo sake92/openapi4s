@@ -240,7 +240,7 @@ class OpenApiGeneratorSuite extends munit.FunSuite {
     scalaFiles.foreach { relativePath =>
       val content = Files.readString(base.resolve(relativePath))
       println(
-        s"""**** $relativePath ****
+        s"""// GENERATED: $relativePath
            |$content""".stripMargin
       )
     }

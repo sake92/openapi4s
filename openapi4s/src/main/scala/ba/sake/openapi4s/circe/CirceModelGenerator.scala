@@ -1,6 +1,8 @@
 package ba.sake.openapi4s
 package circe
 
+import com.typesafe.scalalogging.LazyLogging
+
 import java.nio.file.Paths
 import scala.meta._
 import scala.meta.dialects.Scala34
@@ -11,7 +13,8 @@ class CirceModelGenerator(
     config: OpenApiWriter.Config,
     openApiDefinition: OpenApiDefinition,
     validationTypeMap: Map[String, Map[String, String]] = Map.empty
-) extends OpenApiGenerator {
+) extends OpenApiGenerator
+    with LazyLogging {
 
   // keep track of done schemas (to avoid generating a subtype multiple times)
   private var generatedNamedSchemas = Set.empty[String]
@@ -35,7 +38,7 @@ class CirceModelGenerator(
     val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
       val namedSchemaName = namedSchemaDef.name.capitalize
       if (!generatedFileNames.add(namedSchemaName)) {
-        println(s"Duplicate model file name '${namedSchemaName}'. Skipping the model.")
+        logger.warn(s"Duplicate model file name '${namedSchemaName}'. Skipping the model.")
         None
       } else {
         val modelSources = generateModelSources(namedSchemaDef, None)
@@ -89,7 +92,7 @@ class CirceModelGenerator(
             Some(param"${ScalaIdents.termName(property.name)}: ${propertyTpe}")
           } catch {
             case e: UnsupportedSchemaException =>
-              println(e.toString)
+              logger.warn(e.toString)
               None
           }
         }
@@ -174,15 +177,15 @@ class CirceModelGenerator(
             openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName) match {
               case Some(referencedNamedSchema) => generateModelSources(referencedNamedSchema, Some(typeName))
               case None =>
-                println(s"Non-existing sub-schema type: '${refName}' [${namedSchemaName}]")
+                logger.warn(s"Non-existing sub-schema type: '${refName}' [${namedSchemaName}]")
                 None
             }
           case other =>
-            println(s"Unsupported oneOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+            logger.warn(s"Unsupported oneOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
             None
         }
         if (oneOfCases.isEmpty) {
-          println(s"OneOf without supported sub-schemas at '${namedSchemaName}'. Skipping the model.")
+          logger.warn(s"OneOf without supported sub-schemas at '${namedSchemaName}'. Skipping the model.")
           List.empty
         } else {
           List(
@@ -205,19 +208,19 @@ class CirceModelGenerator(
             openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName).map(_.schema)
           case obj: SchemaDefinition.Obj => Some(obj)
           case other =>
-            println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+            logger.warn(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
             None
         }
         val mergedSchemasProps: List[SchemaProperty] = allOfCases
           .flatMap {
             case SchemaDefinition.Obj(props) => props
             case other =>
-              println(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
+              logger.warn(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
               List.empty
           }
           .foldLeft(List.empty[SchemaProperty]) { (acc, p) =>
             if (acc.exists(_.name == p.name)) {
-              println(
+              logger.warn(
                 s"Duplicate property '${p.name}' after allOf merge [${namedSchemaName}]. Keeping the first occurrence."
               )
               acc
@@ -228,7 +231,7 @@ class CirceModelGenerator(
           superType
         )
       case other =>
-        println(s"Unsupported named schema type for circe: '${other.getClass.getSimpleName}' [${namedSchemaName}]")
+        logger.warn(s"Unsupported named schema type for circe: '${other.getClass.getSimpleName}' [${namedSchemaName}]")
         List.empty
     }
     generatedNamedSchemas += namedSchemaName

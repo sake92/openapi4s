@@ -1,8 +1,12 @@
 package ba.sake.openapi4s
 
 import java.nio.file.Files
+import scala.concurrent.duration._
 
 class GithubJiraNoCrashSuite extends munit.FunSuite {
+
+  // Large specs run alongside generated-source compilation in Mill's parallel test forks.
+  override val munitTimeout = 2.minutes
 
   test("tupson+sharaf generation completes for github.json") {
     run("github.json", "com.example.github")

@@ -23,13 +23,7 @@ class SttpClientGeneratorSuite extends munit.FunSuite {
 
   test("generate() should generate one client per tag, with server constants") {
     val sources = generate()
-    println("*" * 100)
-    println("Generated sttp client sources for sttp_client.yaml :")
-    sources.foreach { source =>
-      println("*" * 50)
-      println(source.file.getFileName)
-      println(source.source.syntax)
-    }
+    TestUtils.printGeneratedSources("sttp client sources for sttp_client.yaml", sources)
     val fileNames = sources.map(_.file.toString)
     assertEquals(
       fileNames.sorted,
