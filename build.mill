@@ -38,8 +38,8 @@ object cli extends SbtModule with Openapi4sPublishModule {
   }
 }
 
-trait Openapi4sPublishModule extends PublishModule {
-  def publishVersion = VcsVersion.vcsState().format()
+trait Openapi4sPublishModule extends SonatypeCentralPublishModule {
+  def publishVersion = VcsVersion.vcsState().format(untaggedSuffix = "-SNAPSHOT")
   def pomSettings = PomSettings(
     description = "Mill plugin for Openapi4s generator",
     organization = "ba.sake",
