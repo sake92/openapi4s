@@ -5,10 +5,10 @@ on:
       - "*"
 
 env:
-  MILL_PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-  PGP_SECRET: ${{ secrets.PGP_SECRET }}
-  MILL_SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-  MILL_SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+  DEDER_SONATYPE_PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+  DEDER_SONATYPE_PGP_SECRET: ${{ secrets.PGP_SECRET }}
+  DEDER_SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+  DEDER_SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
 
 jobs:
   tests:
@@ -22,13 +22,11 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-java@v3
         with:
-          distribution: 'zulu'
-          java-version: '11'
+          distribution: 'temurin'
+          java-version: '21'
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+      - name: Install Deder
+        run: brew install sake92/tap/deder
       - name: Publish
-        run: |
-          export MILL_PGP_SECRET_BASE64="$(printf '%s' "$PGP_SECRET" | base64 -w0)"
-          echo "::add-mask::$MILL_PGP_SECRET_BASE64"
-          ./mill -i mill.scalalib.SonatypeCentralPublishModule/publishAll \
-              --publishArtifacts __.publishArtifacts \
-              --readTimeout 600000 \
-              --awaitTimeout 600000
+        run: deder exec -t publish

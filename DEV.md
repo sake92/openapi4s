@@ -5,20 +5,23 @@ TODOs:
 - on release: bump README "Requirements" (Scala 3.7+, tupson >= 0.30.0, tupson-sttp for sttp clients)
 - mill-openapi4s plugin: expose `--client` / `--tags` flags (separate repo)
 
-NOTE: `./mill __.test` requires `scala-cli` on PATH (used by the compilation suites
+Build prerequisites: JDK 21+, [Deder](https://sake92.github.io/deder/), and `scala-cli`.
+The build schema is pinned in `deder.pkl`.
+
+NOTE: `deder exec -t test` requires `scala-cli` on PATH (used by the compilation suites
 to compile generated sources: `IronValidationCompilationSuite`,
 `GithubJiraCompilationSuite`). Override the binary with `SCALA_CLI_BIN` if needed.
 
 
 ```sh
 
-./mill clean
+deder clean
 
-./mill __.reformat
+scalafmt
 
-./mill __.test
+deder exec -t test
 
-./mill __.publishLocal
+deder exec -t publishLocal
 ```
 
 ```sh

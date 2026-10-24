@@ -21,16 +21,16 @@ Small video demo: https://youtu.be/kf0vGrlKNb8
 ### Snapshots
 
 After tests pass, pushes to `main` between release tags publish snapshots of both
-`openapi4s` and `openapi4s-cli`. Versions include the latest release tag, commit
-count, and short commit hash, for example `0.9.0-10-8083f1-SNAPSHOT`. Find the
-version in the CI job's **Check publishing versions** output.
+`openapi4s` and `openapi4s-cli`. Versions use Deder’s git-based versioning,
+for example `0.9.1-SNAPSHOT` after release `0.9.0`. Find the version in the
+CI job's **Check publishing versions** output.
 
 Add `https://central.sonatype.com/repository/maven-snapshots` to your build's
 repositories to use a library snapshot. For the CLI:
 
 ```shell
 cs launch -r https://central.sonatype.com/repository/maven-snapshots \
-  ba.sake::openapi4s-cli:0.9.0-10-8083f1-SNAPSHOT \
+  ba.sake::openapi4s-cli:0.9.1-SNAPSHOT \
   -M ba.sake.openapi4s.cli.OpenApi4sMain -- --help
 ```
 

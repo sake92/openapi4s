@@ -2,25 +2,24 @@
 
 ## Build
 
-- Mill build: use `./mill` (version pinned in `build.mill`).
+- Deder build: use `deder` (schema pinned in `deder.pkl`); JDK 21+.
 - Generator code is Scala 2.13; generated code is Scala 3 (scalafmt uses scala3 dialect).
 
 ## Commands
 
 | Task | Command |
 |------|---------|
-| All tests | `./mill __.test` |
-| Module tests | `./mill openapi4s.test` |
-| Single suite | `./mill openapi4s.test.testOnly ba.sake.openapi4s.<Suite>` |
+| All tests | `deder exec -t test` |
+| Module tests | `deder exec -t test -m openapi4s-test` |
+| Single suite | `deder exec -t test -m openapi4s-test ba.sake.openapi4s.<Suite>` |
 | Format | `scalafmt` (CLI, `.scalafmt.conf` at root) |
-| Compile | `./mill __.compile` |
-| Publish local | `./mill __.publishLocal` |
+| Compile | `deder exec -t compile` |
+| Publish local | `deder exec -t publishLocal` |
 | Release | `./scripts/release.sh <version>` (commits, tags, pushes) |
 
 Notes:
 
-- `__.test` needs `scala-cli` on PATH (compilation suites compile generated Scala 3 sources). Override the binary with `SCALA_CLI_BIN`.
-- `./mill __.reformat` from `DEV.md` does not exist in this build — use the `scalafmt` CLI instead.
+- `deder exec -t test` needs `scala-cli` on PATH (compilation suites compile generated Scala 3 sources). Override the binary with `SCALA_CLI_BIN`.
 - `GithubCompilationSuite` / `JiraCompilationSuite` are `.ignore`d by default; un-ignore to run locally (slow, needs big heap). Compiler JVM heap: `OPENAPI4S_COMPILE_XMX` (default `6g`).
 - On release: bump versions in `README.md` (CLI example, backend dependency table) — see TODOs in `DEV.md`.
 
