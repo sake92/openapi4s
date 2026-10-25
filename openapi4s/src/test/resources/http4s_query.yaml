@@ -1,0 +1,63 @@
+openapi: 3.0.3
+info:
+  title: Query parameter routes
+  version: 1.0.0
+paths:
+  /search:
+    get:
+      tags: [query]
+      parameters:
+        - { name: limit, in: query, required: true, schema: { type: integer } }
+        - { name: class, in: query, schema: { type: boolean } }
+        - { name: sort-by, in: query, schema: { type: string } }
+        - { name: ids, in: query, required: true, schema: { type: array, items: { type: integer, format: int64 } } }
+        - { name: colors, in: query, schema: { type: array, items: { type: string, enum: [red, blue] } } }
+        - { name: status, in: query, schema: { type: string, enum: [open, closed] } }
+        - { name: id, in: query, schema: { type: string, format: uuid } }
+        - { name: other-id, in: query, schema: { type: string, format: uuid } }
+        - { name: date, in: query, schema: { type: string, format: date } }
+        - { name: at, in: query, schema: { type: string, format: date-time } }
+        - { name: ratio, in: query, schema: { type: number, format: float } }
+        - { name: score, in: query, schema: { type: number, format: double } }
+        - { name: state, in: query, schema: { $ref: '#/components/schemas/State' } }
+        - { name: kind, in: query, schema: { type: integer, format: int32, enum: [1, 2] } }
+        - { name: queryParam1, in: query, schema: { type: string } }
+        - { name: req, in: query, schema: { type: string } }
+        - { name: toString, in: query, schema: { type: string } }
+        - { name: toString_, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Results
+          content:
+            application/json:
+              schema: { type: string }
+  /other:
+    get:
+      tags: [query]
+      parameters:
+        - { name: limit, in: query, schema: { type: string } }
+      responses:
+        '204': { description: No content }
+  /health:
+    get:
+      tags: [query]
+      responses:
+        '204': { description: No content }
+  /again:
+    get:
+      tags: [query]
+      parameters:
+        - { name: limit, in: query, schema: { type: string } }
+      responses:
+        '204': { description: No content }
+  /collision/{limit}:
+    get:
+      tags: [query]
+      parameters:
+        - { name: limit, in: path, required: true, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, format: int32 } }
+      responses:
+        '204': { description: No content }
+components:
+  schemas:
+    State: { type: string, enum: [active, inactive] }
