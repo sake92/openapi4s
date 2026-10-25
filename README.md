@@ -154,7 +154,7 @@ Openapi4s is a matrix of independent backends — pick one model backend, one se
 | Feature | `sharaf` | `http4s` |
 |---|---|---|
 | Controllers / routes | ✅ | ✅ |
-| Query params | ✅ | TODO — contributions welcome |
+| Query params | ✅ | ✅ |
 
 `sharaf` works with `tupson` models, `http4s` works with `circe` models.
 Other model/framework combos only print a warning — generated sources may need manual adjustments.
@@ -208,7 +208,10 @@ Add the dependencies that the generated code needs to your own build:
 
 - JSON only — no XML, protobuf, etc.
 - JSON Schema input is local and model-only: use a `.json` file or directory. Directory references may target another schema root or a top-level `$defs` entry (`other.json#/$defs/Name`).
-- `http4s` backend: routes only; query params and validation are not implemented yet
+- `http4s` query params use typed DSL matchers. Optional scalars bind to `Option`; repeated array
+  parameters bind to sequences (empty when an optional array is absent). Enums bind to validated
+  primitive values. Missing required or malformed parameters do not match the route, following
+  http4s DSL behavior. Schema constraint validation and non-repeated array encodings are not implemented.
 - `sttp` client backend: no auth/security schemes, multipart, streaming, or non-JSON content types yet
 
 ## Development

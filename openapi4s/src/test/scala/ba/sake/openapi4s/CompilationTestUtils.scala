@@ -16,18 +16,32 @@ object CompilationTestUtils {
 
   /** Compiles all .scala files under `base` with scala-cli. Fails the assertion on non-zero exit. */
   def compileGenerated(base: Path, scalaVersion: String, dependencies: Seq[String]): Unit = {
+    checkGenerated(base, scalaVersion, dependencies, "compile", Nil)
+  }
+
+  def runGenerated(base: Path, scalaVersion: String, dependencies: Seq[String], mainClass: String): Unit = {
+    checkGenerated(base, scalaVersion, dependencies, "run", List("--main-class", mainClass))
+  }
+
+  private def checkGenerated(
+      base: Path,
+      scalaVersion: String,
+      dependencies: Seq[String],
+      command: String,
+      extraArgs: List[String]
+  ): Unit = {
     val scalaFiles = listScalaFiles(base)
     assert(scalaFiles.nonEmpty, s"No generated Scala files found under: $base")
 
     val scalaCliBin = sys.env.getOrElse("SCALA_CLI_BIN", "scala-cli")
-    val args = List("compile", "--server=false", s"--scala=$scalaVersion") ++
+    val args = List(command, "--server=false", s"--scala=$scalaVersion") ++ extraArgs ++
       dependencies.flatMap(d => List("--dependency", d)) ++
       scalaFiles.map(f => base.resolve(f).toString)
 
     val (exitCode, output) = runProcess(scalaCliBin, args)
     assert(
       exitCode == 0,
-      s"Generated sources failed to compile (scala-cli exit code $exitCode):\n${preview(output)}"
+      s"Generated sources failed to $command (scala-cli exit code $exitCode):\n${preview(output)}"
     )
   }
 
