@@ -209,9 +209,11 @@ Add the dependencies that the generated code needs to your own build:
 - JSON only — no XML, protobuf, etc.
 - JSON Schema input is local and model-only: use a `.json` file or directory. Directory references may target another schema root or a top-level `$defs` entry (`other.json#/$defs/Name`).
 - `http4s` query params use typed DSL matchers. Optional scalars bind to `Option`; repeated array
-  parameters bind to sequences (empty when an optional array is absent). Enums bind to validated
-  primitive values. Missing required or malformed parameters do not match the route, following
-  http4s DSL behavior. Schema constraint validation and non-repeated array encodings are not implemented.
+  parameters bind to sequences (empty when an optional array is absent). Built-in decoders are inferred;
+  other types (such as UUIDs, dates, and named enums) get one `given QueryParamDecoder[T] = ???`
+  with a TODO comment per type. Fill these in before using the corresponding routes.
+  Missing required or malformed parameters do not match the route, following http4s DSL behavior.
+  Inline enums use primitive types; schema validation and non-repeated array encodings are not implemented.
 - `sttp` client backend: no auth/security schemes, multipart, streaming, or non-JSON content types yet
 
 ## Development

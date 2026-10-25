@@ -17,16 +17,38 @@ class Http4sGeneratorSuite extends munit.FunSuite {
       models = "circe",
       framework = "http4s"
     )
-    OpenApiWriter(config).write()
+    val sources = OpenApiWriter(config).write()
+    TestUtils.printGeneratedSources("Http4s query parameter scaffold", sources)
     // Fill in the generated scaffold as a consumer would, so we also verify the bound values.
     val routesFile = baseFolder.resolve("querytest/routes/QueryRoutes.scala")
     val routesSource = Files.readString(routesFile)
+    val optionalLimitMatcher =
+      "private object LimitQueryParamMatcher2 extends OptionalQueryParamDecoderMatcher[String](\"limit\")"
+    assertEquals(routesSource.sliding(optionalLimitMatcher.length).count(_ == optionalLimitMatcher), 1)
+    assert(!routesSource.contains("(using "))
+    assert(!routesSource.contains("QueryParam0_"))
+    val consumerDecoders = List(
+      "UUID" -> """QueryParamDecoder.fromUnsafeCast[UUID](value => UUID.fromString(value.value))("UUID")""",
+      "LocalDate" -> "QueryParamDecoder.localDate(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)",
+      "Instant" -> "QueryParamDecoder.instant(java.time.format.DateTimeFormatter.ISO_INSTANT)",
+      "State" -> """QueryParamDecoder.fromUnsafeCast[State](value => State.valueOf(value.value))("State")"""
+    )
+    val completedSource = consumerDecoders.foldLeft(routesSource) { case (code, (tpe, decoder)) =>
+      val placeholder = s"given QueryParamDecoder[$tpe] = ???"
+      assertEquals(routesSource.sliding(placeholder.length).count(_ == placeholder), 1)
+      assert(routesSource.contains(s"// TODO: implement query parameter decoding\n  $placeholder"))
+      code.replace(placeholder, s"given QueryParamDecoder[$tpe] = $decoder")
+    }
     val response = """Ok(List(limit.toString, queryParam1.toString, queryParam2.toString,
       ids.mkString(","), colors.mkString(","), status.toString, id.toString, date.toString,
       at.toString, ratio.toString, score.toString, state.toString).mkString("|"))"""
     val placeholder = "NotImplemented(\"TODO: return String\")"
     assert(routesSource.contains(placeholder))
-    Files.writeString(routesFile, routesSource.replace(placeholder, response))
+    val completedRoutes = completedSource
+      .replace("class QueryRoutes", "class CompletedQueryRoutes")
+      .replace(placeholder, response)
+    // Compile the untouched scaffold too; run a copy with the TODOs filled in by the consumer.
+    Files.writeString(routesFile.resolveSibling("CompletedQueryRoutes.scala"), completedRoutes)
     val check = getClass.getResourceAsStream("/http4s_query_check.scala")
     try Files.copy(check, baseFolder.resolve("QueryCheck.scala"), StandardCopyOption.REPLACE_EXISTING)
     finally check.close()

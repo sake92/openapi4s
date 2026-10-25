@@ -31,7 +31,8 @@ class Http4sGenerator(
   ): List[GeneratedFileSource] = {
     val controllerName = CaseUtils.toCamelCase(tag, true, '_') + "Routes"
     val controllerTypeName = Type.Name(controllerName)
-    val routeDefinitions = pathDefinitions.zipWithIndex.map { case (pathDef, routeIndex) =>
+    val matcherNames = mutable.LinkedHashMap.empty[QueryParam, Term.Name]
+    val routeDefinitions = pathDefinitions.map { pathDef =>
       val pathSegmentPatterns = pathDef.pathSegments.map {
         case PathSegment.Literal(value) => Lit.String(value)
         case PathSegment.Param(name, schema) =>
@@ -71,7 +72,17 @@ class Http4sGenerator(
       }
       val takenBindings = mutable.Set("req", "reqBody", "resp") ++ pathBindings
       val (queryMatchers, queryPatterns) = pathDef.queryParams.zipWithIndex.map { case (qp, paramIndex) =>
-        generateQueryParam(qp, routeIndex, paramIndex, takenBindings)
+        val matcherName = matcherNames.getOrElseUpdate(
+          qp, {
+            val words = qp.name.replaceAll("[^a-zA-Z0-9]", "_")
+            val camelizedName = CaseUtils.toCamelCase(words, true, '_') + "QueryParamMatcher"
+            val baseName = if (ScalaIdents.isValid(camelizedName)) camelizedName else s"Query$camelizedName"
+            val usedNames = matcherNames.values.map(_.value).toSet
+            val candidates = Iterator.single(baseName) ++ Iterator.from(2).map(i => s"$baseName$i")
+            Term.Name(candidates.find(name => !usedNames(name)).get)
+          }
+        )
+        generateQueryParam(qp, matcherName, paramIndex, takenBindings)
       }.unzip
       val routePattern = queryPatterns.headOption match {
         case Some(first) =>
@@ -128,22 +139,19 @@ class Http4sGenerator(
         p"""case req @ ${routePattern} =>
                 { ..${routeStmts} }
         """
-      (queryMatchers, pathDefCase)
+      (queryMatchers.flatten, pathDefCase)
     }
     val (queryMatchers, casesnel) = routeDefinitions.unzip
-    val matcherDefinitions = queryMatchers.flatten
+    val matcherDefinitions = queryMatchers.flatten.distinctBy(_.syntax)
     val pkg = generatePkgSelect(s"${config.basePackage}.routes")
     val imports = List[Import](
       q"import java.time.*",
       q"import java.util.UUID",
       q"import cats.effect.IO",
-      q"import org.http4s.{HttpRoutes, QueryParamDecoder, ParseFailure}",
+      q"import org.http4s.{HttpRoutes, QueryParamDecoder}",
       q"import org.http4s.dsl.io._"
     ) ++ frameworkModelImports ++ List(GenerationImports.modelWildcardImport(config.basePackage))
-    List(
-      GeneratedFileSource(
-        Paths.get(s"routes/${controllerName}.scala"),
-        source"""
+    val generatedSource = source"""
         package ${pkg} {
             ..${imports}
             class ${controllerTypeName} {
@@ -154,37 +162,45 @@ class Http4sGenerator(
             }
         }
         """
-      )
-    )
+    // Parse the final text so TODO comments survive scala.meta's structural rendering.
+    val decoderStubs = matcherDefinitions.collect { case stub: Defn.GivenAlias => stub.syntax }
+    val sourceWithTodos = decoderStubs.foldLeft(generatedSource.syntax) { (code, stub) =>
+      code.replace(stub, s"// TODO: implement query parameter decoding\n  $stub")
+    }
+    List(GeneratedFileSource(Paths.get(s"routes/${controllerName}.scala"), sourceWithTodos.parse[Source].get))
   }
 
   private def generateQueryParam(
       qp: QueryParam,
-      routeIndex: Int,
+      matcherName: Term.Name,
       paramIndex: Int,
       takenBindings: mutable.Set[String]
-  ): (Stat, Pat) = {
+  ): (List[Stat], Pat) = {
     val schema = resolveQuerySchema(qp.schema)
     val (elementSchema, isArray) = schema match {
       case SchemaDefinition.Arr(inner, _, _, _) => (resolveQuerySchema(inner), true)
       case other                                => (other, false)
     }
-    val (tpe, decoder) = queryParamDecoder(elementSchema)
-    val matcherName = Term.Name(s"QueryParam${routeIndex}_${paramIndex}Matcher")
+    val tpe = queryParamType(elementSchema)
+    val builtInTypes = Set("String", "Boolean", "Int", "Long", "Float", "Double")
+    val decoderStubs =
+      if (builtInTypes(tpe.syntax)) Nil
+      else List(q"given QueryParamDecoder[$tpe] = ???")
     val matcherType =
       if (isArray && !qp.required) t"OptionalMultiQueryParamDecoderMatcher[$tpe]"
       else if (!qp.required) t"OptionalQueryParamDecoderMatcher[$tpe]"
       else t"QueryParamDecoderMatcher[$tpe]"
     val wireName = Lit.String(qp.name)
+    val matcherInit = init"$matcherType($wireName)"
     val matcher =
       if (isArray && qp.required) q"""
       private object $matcherName {
-        private val matcher = new QueryParamDecoderMatcher[$tpe]($wireName)(using $decoder) {}
+        private val matcher = new $matcherInit {}
         def unapply(params: Map[String, collection.Seq[String]]): Option[collection.Seq[$tpe]] =
           matcher.unapplySeq(params)
       }
     """
-      else q"private object $matcherName extends $matcherType($wireName)(using $decoder)"
+      else q"private object $matcherName extends $matcherInit"
     // Backticked identifiers in patterns refer to stable values instead of binding new variables.
     val baseBindingName =
       if (ScalaIdents.isValid(qp.name) && qp.name.head.isLower) ScalaIdents.termName(qp.name).value
@@ -196,58 +212,36 @@ class Http4sGenerator(
     val pattern =
       if (isArray && !qp.required) p"$matcherName(cats.data.Validated.Valid($binding))"
       else p"$matcherName($binding)"
-    (matcher, pattern)
+    (decoderStubs :+ matcher, pattern)
   }
 
   private def resolveQuerySchema(schema: SchemaDefinition, seen: Set[String] = Set.empty): SchemaDefinition =
     schema match {
-      case SchemaDefinition.Opt(inner)      => resolveQuerySchema(inner, seen)
-      case SchemaDefinition.Named(_, inner) => resolveQuerySchema(inner, seen)
+      case SchemaDefinition.Opt(inner)                                 => resolveQuerySchema(inner, seen)
+      case named @ SchemaDefinition.Named(_, _: SchemaDefinition.Enum) => named
+      case SchemaDefinition.Named(_, inner)                            => resolveQuerySchema(inner, seen)
       case SchemaDefinition.Ref(name) if !seen(name) =>
         val named = openApiDefinition.namedSchemaDefinitions.defs.find(_.name == name).getOrElse {
           throw new UnsupportedSchemaException(s"Unknown query parameter schema '$name'")
         }
-        resolveQuerySchema(named.schema, seen + name)
+        resolveQuerySchema(named, seen + name)
       case _: SchemaDefinition.Ref =>
         throw new UnsupportedSchemaException("Recursive query parameter schemas are not supported")
       case other => other
     }
 
-  private def queryParamDecoder(schema: SchemaDefinition): (Type, Term) = {
-    val tpe = schema match {
-      case _: SchemaDefinition.Enum         => t"String"
-      case SchemaDefinition.Const(value, _) => literalType(value)
-      case other =>
-        SchemaUtils.resolveType(
-          other,
-          None,
-          None,
-          allowNullable = false,
-          "http4s query parameter",
-          fallbackAnyType = t"String"
-        )
-    }
-    val decoder = schema match {
-      case _: SchemaDefinition.Uuid =>
-        q"QueryParamDecoder.fromUnsafeCast[UUID](value => UUID.fromString(value.value))(${Lit.String("UUID")})"
-      case _: SchemaDefinition.Date =>
-        q"QueryParamDecoder.localDate(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)"
-      case _: SchemaDefinition.DateTime =>
-        q"QueryParamDecoder.instant(java.time.format.DateTimeFormatter.ISO_INSTANT)"
-      case _ => q"QueryParamDecoder[$tpe]"
-    }
-    val allowedValues = schema match {
-      case SchemaDefinition.Enum(values, _)         => values.map(Lit.String(_))
-      case SchemaDefinition.EnumLiterals(values, _) => values.map(queryLiteral)
-      case SchemaDefinition.Const(value, _)         => List(queryLiteral(value))
-      case _                                        => Nil
-    }
-    val constrainedDecoder =
-      if (allowedValues.isEmpty) decoder
-      else q"""$decoder.emap(value =>
-      if (Set(..$allowedValues).contains(value)) Right(value)
-      else Left(ParseFailure("Invalid query parameter value", "Expected an enum value")))"""
-    (tpe, constrainedDecoder)
+  private def queryParamType(schema: SchemaDefinition): Type = schema match {
+    case _: SchemaDefinition.Enum         => t"String"
+    case SchemaDefinition.Const(value, _) => literalType(value)
+    case other =>
+      SchemaUtils.resolveType(
+        other,
+        None,
+        None,
+        allowNullable = false,
+        "http4s query parameter",
+        fallbackAnyType = t"String"
+      )
   }
 
   private def literalType(value: EnumLiteral): Type = value match {
@@ -256,14 +250,6 @@ class Http4sGenerator(
     case _: EnumLiteral.LongValue => t"Long"
     case _: EnumLiteral.NumValue  => t"Double"
     case _: EnumLiteral.BoolValue => t"Boolean"
-  }
-
-  private def queryLiteral(value: EnumLiteral): Lit = value match {
-    case EnumLiteral.StrValue(v)  => Lit.String(v)
-    case EnumLiteral.IntValue(v)  => Lit.Int(v)
-    case EnumLiteral.LongValue(v) => Lit.Long(v)
-    case EnumLiteral.NumValue(v)  => Lit.Double(v)
-    case EnumLiteral.BoolValue(v) => Lit.Boolean(v)
   }
 
   private def generatePkgSelect(pkg: String) = {

@@ -14,6 +14,7 @@ paths:
         - { name: colors, in: query, schema: { type: array, items: { type: string, enum: [red, blue] } } }
         - { name: status, in: query, schema: { type: string, enum: [open, closed] } }
         - { name: id, in: query, schema: { type: string, format: uuid } }
+        - { name: other-id, in: query, schema: { type: string, format: uuid } }
         - { name: date, in: query, schema: { type: string, format: date } }
         - { name: at, in: query, schema: { type: string, format: date-time } }
         - { name: ratio, in: query, schema: { type: number, format: float } }
@@ -40,6 +41,13 @@ paths:
   /health:
     get:
       tags: [query]
+      responses:
+        '204': { description: No content }
+  /again:
+    get:
+      tags: [query]
+      parameters:
+        - { name: limit, in: query, schema: { type: string } }
       responses:
         '204': { description: No content }
   /collision/{limit}:
