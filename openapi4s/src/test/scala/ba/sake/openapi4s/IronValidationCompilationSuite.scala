@@ -17,12 +17,12 @@ class IronValidationCompilationSuite extends munit.FunSuite {
     )
     CompilationTestUtils.compileGenerated(
       baseFolder.resolve("com/example/iron"),
-      scalaVersion = "3.7.3",
+      scalaVersion = "3.9.0",
       dependencies = Seq(
-        "io.circe::circe-core:0.14.10",
-        "io.circe::circe-generic:0.14.10",
-        "io.github.iltotore::iron:3.0.2",
-        "io.github.iltotore::iron-circe:3.0.2"
+        "io.circe::circe-core:0.14.17",
+        "io.circe::circe-generic:0.14.17",
+        "io.github.iltotore::iron:3.4.1",
+        "io.github.iltotore::iron-circe:3.4.1"
       )
     )
   }
@@ -35,10 +35,10 @@ class IronValidationCompilationSuite extends munit.FunSuite {
     )
     CompilationTestUtils.compileGenerated(
       baseFolder.resolve("com/example/plain"),
-      scalaVersion = "3.7.3",
+      scalaVersion = "3.9.0",
       dependencies = Seq(
-        "io.circe::circe-core:0.14.10",
-        "io.circe::circe-generic:0.14.10"
+        "io.circe::circe-core:0.14.17",
+        "io.circe::circe-generic:0.14.17"
       )
     )
   }

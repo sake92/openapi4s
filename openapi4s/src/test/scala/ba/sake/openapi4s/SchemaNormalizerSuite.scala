@@ -89,9 +89,9 @@ class SchemaNormalizerSuite extends munit.FunSuite {
       assert(rendered.contains("count: Long"), rendered)
       assert(rendered.contains(if (backend == "tupson") "kind: \"ready\"" else "kind: Json"), rendered)
       val dependencies =
-        if (backend == "tupson") Seq("ba.sake::tupson:0.30.0", "ba.sake::validson:0.19.0")
-        else Seq("io.circe::circe-core:0.14.10", "io.circe::circe-generic:0.14.10")
-      CompilationTestUtils.compileGenerated(config.baseFolder.resolve("example"), "3.7.3", dependencies)
+        if (backend == "tupson") Seq("ba.sake::tupson:0.31.0", "ba.sake::validson:0.20.0")
+        else Seq("io.circe::circe-core:0.14.17", "io.circe::circe-generic:0.14.17")
+      CompilationTestUtils.compileGenerated(config.baseFolder.resolve("example"), "3.9.0", dependencies)
     }
   }
 }

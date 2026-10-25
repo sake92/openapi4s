@@ -15,12 +15,12 @@ class SttpClientCompilationSuite extends munit.FunSuite {
     val baseFolder = generate("sttp_client.yaml", "com.example.circeclient", models = "circe", tags = None)
     CompilationTestUtils.compileGenerated(
       baseFolder.resolve("com/example/circeclient"),
-      scalaVersion = "3.7.3",
+      scalaVersion = "3.9.0",
       dependencies = Seq(
-        "com.softwaremill.sttp.client4::core:4.0.26",
-        "com.softwaremill.sttp.client4::circe:4.0.26",
-        "io.circe::circe-core:0.14.10",
-        "io.circe::circe-generic:0.14.10"
+        "com.softwaremill.sttp.client4::core:4.1.0",
+        "com.softwaremill.sttp.client4::circe:4.1.0",
+        "io.circe::circe-core:0.14.17",
+        "io.circe::circe-generic:0.14.17"
       )
     )
   }
@@ -30,12 +30,12 @@ class SttpClientCompilationSuite extends munit.FunSuite {
       generate("sttp_client.yaml", "com.example.tupsonclient", models = "tupson", tags = Some(List("Pet")))
     CompilationTestUtils.compileGenerated(
       baseFolder.resolve("com/example/tupsonclient"),
-      scalaVersion = "3.7.3",
+      scalaVersion = "3.9.0",
       dependencies = Seq(
-        "com.softwaremill.sttp.client4::core:4.0.26",
-        "ba.sake::tupson:0.30.0",
-        "ba.sake::tupson-sttp:0.30.0",
-        "ba.sake::validson:0.19.0"
+        "com.softwaremill.sttp.client4::core:4.1.0",
+        "ba.sake::tupson:0.31.0",
+        "ba.sake::tupson-sttp:0.31.0",
+        "ba.sake::validson:0.20.0"
       )
     )
   }
