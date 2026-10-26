@@ -19,3 +19,5 @@ out/
 .worktrees/
 
 docs/superpowers/
+docs/_site/
+docs/.flatmark-cache/

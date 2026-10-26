@@ -7,6 +7,8 @@ It also accepts local JSON Schema files or directories for model-only generation
 
 Small video demo: https://youtu.be/kf0vGrlKNb8
 
+Documentation: https://sake92.github.io/openapi4s
+
 ## Features
 
 - **incremental generator**
@@ -15,6 +17,12 @@ Small video demo: https://youtu.be/kf0vGrlKNb8
 - **lenient parser + generator**
   - if something is not supported it will still (mostly) work
   - you can adapt your OpenAPI spec to work gradually
+
+## Why OpenAPI4s?
+
+OpenAPI4s is for teams that want an OpenAPI contract to remain the source of truth without treating generated Scala as disposable output. It generates idiomatic Scala 3 models, validation types, server routes and clients, then uses semantic Scala source merging to apply later contract changes while preserving handwritten implementations. New fields, constraints and endpoints can be regenerated into an existing project.
+
+This differs from Scala-first libraries such as Tapir, where Scala owns the API and OpenAPI is derived from it, and from template generators such as Guardrail or OpenAPI Generator, which overwrite generated transport files and keep user logic behind a separate interface. OpenAPI4s is the strongest fit when the requirements are **contract-first OpenAPI, modern Scala 3, readable generated code and safe incremental regeneration**. Choose a Scala-first library instead when Scala—not OpenAPI—should own the contract.
 
 ## Usage
 
@@ -29,7 +37,8 @@ Add `https://central.sonatype.com/repository/maven-snapshots` to your build's
 repositories to use a library snapshot. For the CLI:
 
 ```shell
-cs launch -r https://central.sonatype.com/repository/maven-snapshots \
+cs launch --scala-version 2.13.16 \
+  -r https://central.sonatype.com/repository/maven-snapshots \
   ba.sake::openapi4s-cli:0.9.1-SNAPSHOT \
   -M ba.sake.openapi4s.cli.OpenApi4sMain -- --help
 ```
@@ -46,7 +55,8 @@ generate a client. The examples below are self-contained; replace the spec path 
 Generate a server (models + routes/controllers):
 
 ```shell
-cs launch ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
+cs launch --scala-version 2.13.16 \
+  ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models circe \
   --framework http4s \
   --url openapi.yaml \
@@ -57,7 +67,8 @@ cs launch ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain --
 Generate a client (models + sttp client):
 
 ```shell
-cs launch ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
+cs launch --scala-version 2.13.16 \
+  ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models tupson \
   --client sttp \
   --url openapi.yaml \
@@ -68,7 +79,8 @@ cs launch ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain --
 Generate models only from a `my_schemas` folder:
 
 ```shell
-cs launch ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
+cs launch --scala-version 2.13.16 \
+  ba.sake::openapi4s-cli:0.9.0 -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models tupson \
   --url my_schemas \
   --baseFolder src/main/scala \

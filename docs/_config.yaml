@@ -1,0 +1,16 @@
+name: OpenAPI4s Documentation
+description: Contract-first OpenAPI generation for Scala 3
+
+categories:
+  tutorials:
+    label: Tutorials
+    description: Learn OpenAPI4s by generating a small API
+  howtos:
+    label: How-Tos
+    description: Solve common OpenAPI4s integration tasks
+  reference:
+    label: Reference
+    description: CLI, backend and compatibility details
+  explanation:
+    label: Explanation
+    description: Design choices and alternatives

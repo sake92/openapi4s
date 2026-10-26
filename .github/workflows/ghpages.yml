@@ -1,0 +1,34 @@
+name: Deploy documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - ".github/workflows/ghpages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install FlatMark
+        run: |
+          FLATMARK_VERSION=0.3.0
+          curl -fL "https://github.com/sake92/flatmark/releases/download/v${FLATMARK_VERSION}/flatmark_${FLATMARK_VERSION}_amd64.deb" -o flatmark.deb
+          sudo dpkg -i flatmark.deb
+      - name: Build
+        env:
+          FLATMARK_BASE_URL: https://sake92.github.io/openapi4s
+        run: flatmark build -i docs
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: docs/_site
+          force: true
+          clean: true
