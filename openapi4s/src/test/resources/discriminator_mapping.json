@@ -1,0 +1,111 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Polymorphic pets comparison",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/pets": {
+      "post": {
+        "tags": [
+          "Pets"
+        ],
+        "operationId": "echoPet",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pet"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Echo the selected case",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pet"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Pet": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Cat"
+          },
+          {
+            "$ref": "#/components/schemas/Dog"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "cat": "#/components/schemas/Cat",
+            "dog": "#/components/schemas/Dog"
+          }
+        }
+      },
+      "Cat": {
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "lives"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "cat"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "lives": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 9
+          }
+        }
+      },
+      "Dog": {
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "good"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "dog"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "good": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

@@ -176,7 +176,7 @@ class CirceModelGenerator(
           case SchemaDefinition.Ref(refName) =>
             openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName) match {
               case Some(referencedNamedSchema) => generateModelSources(referencedNamedSchema, Some(typeName))
-              case None =>
+              case None                        =>
                 logger.warn(s"Non-existing sub-schema type: '${refName}' [${namedSchemaName}]")
                 None
             }
@@ -188,13 +188,34 @@ class CirceModelGenerator(
           logger.warn(s"OneOf without supported sub-schemas at '${namedSchemaName}'. Skipping the model.")
           List.empty
         } else {
+          val baseConfiguration = q"Configuration.default.withDiscriminator(${Lit.String(
+              oneOfSchema.discriminatorPropertyName.getOrElse("@type")
+            )})"
+          val constructorNames = oneOfSchema.schemas.collect { case SchemaDefinition.Ref(refName) =>
+            val wireNames = oneOfSchema.discriminatorMapping.toList.collect {
+              case (wireName, target) if target == refName || target == s"#/components/schemas/$refName" => wireName
+            }.sorted
+            if (wireNames.size > 1) {
+              throw new UnsupportedSchemaException(
+                s"Multiple discriminator values for '$refName' are not supported by Circe constructor-name mapping [$namedSchemaName]"
+              )
+            }
+            refName.capitalize -> wireNames.headOption.getOrElse(refName)
+          }
+          val renamedConstructors = constructorNames.filter { case (name, wireName) => name != wireName }
+          val configuration =
+            if (renamedConstructors.isEmpty) baseConfiguration
+            else {
+              val cases = renamedConstructors.map { case (name, wireName) =>
+                Case(Lit.String(name), None, Lit.String(wireName))
+              } :+ Case(Pat.Var(Term.Name("name")), None, q"name")
+              q"$baseConfiguration.withTransformConstructorNames(${Term.PartialFunction(cases)})"
+            }
           List(
             q"sealed trait ${typeName} ",
             q"""
               object ${termName} {
-                given Configuration =  Configuration.default.withDiscriminator(${Lit.String(
-                oneOfSchema.discriminatorPropertyName.getOrElse("@type")
-              )})
+                given Configuration = $configuration
                 given Codec[${typeName}] = ConfiguredCodec.derived
                 ..${oneOfCases}
               }
@@ -207,14 +228,14 @@ class CirceModelGenerator(
           case SchemaDefinition.Ref(refName) =>
             openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName).map(_.schema)
           case obj: SchemaDefinition.Obj => Some(obj)
-          case other =>
+          case other                     =>
             logger.warn(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
             None
         }
         val mergedSchemasProps: List[SchemaProperty] = allOfCases
           .flatMap {
             case SchemaDefinition.Obj(props) => props
-            case other =>
+            case other                       =>
               logger.warn(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
               List.empty
           }

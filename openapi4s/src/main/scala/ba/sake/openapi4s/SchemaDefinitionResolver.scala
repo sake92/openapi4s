@@ -30,7 +30,7 @@ class SchemaDefinitionResolver extends LazyLogging {
             SchemaDefinition.Unknown()
           } else {
             schemas.get(name) match {
-              case None => SchemaDefinition.Ref(name)
+              case None            => SchemaDefinition.Ref(name)
               case Some(rawSchema) =>
                 inProgress += name
                 try resolveSchema(rawSchema, name)
@@ -88,7 +88,7 @@ class SchemaDefinitionResolver extends LazyLogging {
           case oneOf: SchemaDefinition.OneOf       => Some(SchemaDefinition.Named(schemaKey, oneOf))
           case anyOf: SchemaDefinition.AnyOf       => Some(SchemaDefinition.Named(schemaKey, anyOf))
           case allOf: SchemaDefinition.AllOf       => Some(SchemaDefinition.Named(schemaKey, allOf))
-          case other =>
+          case other                               =>
             logger.warn(
               s"Unsupported named schema at ${schemaKey} [${other}]. Skipping the model. This may cause cascading failures!!!"
             )
@@ -113,8 +113,8 @@ class SchemaDefinitionResolver extends LazyLogging {
       SchemaDefinition.optional(normalize(inner, seenAliases))
     case SchemaDefinition.Arr(inner, minItems, maxItems, uniqueItems) =>
       SchemaDefinition.Arr(normalize(inner, seenAliases), minItems, maxItems, uniqueItems)
-    case SchemaDefinition.OneOf(schemas, discriminatorPropertyName) =>
-      SchemaDefinition.OneOf(schemas.map(normalize(_, seenAliases)), discriminatorPropertyName)
+    case oneOf: SchemaDefinition.OneOf =>
+      oneOf.copy(schemas = oneOf.schemas.map(normalize(_, seenAliases)))
     case SchemaDefinition.AnyOf(schemas) =>
       SchemaDefinition.AnyOf(schemas.map(normalize(_, seenAliases)))
     case SchemaDefinition.AllOf(schemas) =>
@@ -340,7 +340,11 @@ class SchemaDefinitionResolver extends LazyLogging {
     val schemas =
       Option(schema.getOneOf).map(_.asScala).getOrElse(List.empty).map(s => resolveSchema(s, context)).toList
     val discriminatorPropertyName = Option(schema.getDiscriminator).map(_.getPropertyName)
-    SchemaDefinition.OneOf(schemas, discriminatorPropertyName = discriminatorPropertyName)
+    val discriminatorMapping = Option(schema.getDiscriminator)
+      .flatMap(d => Option(d.getMapping))
+      .map(_.asScala.toMap)
+      .getOrElse(Map.empty[String, String])
+    SchemaDefinition.OneOf(schemas, discriminatorPropertyName, discriminatorMapping)
   }
 
   private def getAnyOfSchema(schema: Schema[?], context: String): SchemaDefinition = {
@@ -391,7 +395,7 @@ class SchemaDefinitionResolver extends LazyLogging {
     case d: java.lang.Double      => EnumLiteral.NumValue(d.doubleValue)
     case f: java.lang.Float       => EnumLiteral.NumValue(f.doubleValue)
     case bd: java.math.BigDecimal => EnumLiteral.NumValue(bd.doubleValue)
-    case other =>
+    case other                    =>
       logger.warn(
         s"Unsupported enum/const literal value: '${other}' (${other.getClass}). Treating it as a string literal."
       )
