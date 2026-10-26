@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="OpenAPI4s command-line options">
+  <title>CLI | OpenAPI4s Documentation</title>
+  <link rel="icon" href="https://sake92.github.io/openapi4s/images/favicon.svg" type="image/svg+xml">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/a11y-dark.min.css" media="(prefers-color-scheme: dark)" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/a11y-light.min.css" media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.conditional.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://sake92.github.io/openapi4s/styles/default.css">
+ </head>
+ <body>
+  <header class="pico container">
+   <nav aria-label="Main navigation">
+    <a href="https://sake92.github.io/openapi4s/">OpenAPI4s Documentation</a>
+    <div>
+     <a href="https://sake92.github.io/openapi4s/tutorials">Tutorials</a> <a href="https://sake92.github.io/openapi4s/howtos">How-Tos</a> <a href="https://sake92.github.io/openapi4s/reference">Reference</a> <a href="https://sake92.github.io/openapi4s/explanation">Explanation</a>
+    </div>
+    <form action="https://sake92.github.io/openapi4s/search/results.html" method="get" role="search">
+     <input name="q" type="search" placeholder="Search" aria-label="Search this site">
+    </form>
+   </nav>
+  </header>
+  <script>
+for (const link of document.querySelectorAll('body > header > nav > div > a')) {
+    const path = new URL(link.href).pathname.replace(/\/$/, '');
+    const current = window.location.pathname;
+    if (current === path || current.startsWith(path + '/')) link.setAttribute('aria-current', 'page');
+}
+</script>
+  <main class="pico container">
+   <div>
+    <div class="content">
+     <h1 id="cli">CLI<a href="#cli" class="flatmark-anchor" aria-label="Anchor"> 🔗</a></h1>
+     <p>All runs generate models. Add <code>--framework</code> for a server or <code>--client</code> for a client.</p>
+     <table>
+      <thead>
+       <tr>
+        <th>Flag</th>
+        <th>Default</th>
+        <th>Description</th>
+       </tr>
+      </thead>
+      <tbody>
+       <tr>
+        <td><code>--models</code></td>
+        <td><code>tupson</code></td>
+        <td>Model backend: <code>circe</code> or <code>tupson</code></td>
+       </tr>
+       <tr>
+        <td><code>--framework</code></td>
+        <td>none</td>
+        <td>Server backend: <code>http4s</code> or <code>sharaf</code></td>
+       </tr>
+       <tr>
+        <td><code>--validation</code></td>
+        <td><code>none</code></td>
+        <td>Validation backend: <code>none</code>, <code>iron</code> or <code>validson</code></td>
+       </tr>
+       <tr>
+        <td><code>--client</code></td>
+        <td>none</td>
+        <td>Client backend: <code>sttp</code></td>
+       </tr>
+       <tr>
+        <td><code>--tags</code></td>
+        <td>none</td>
+        <td>Comma-separated operation tags to include</td>
+       </tr>
+       <tr>
+        <td><code>--excludeTags</code></td>
+        <td>none</td>
+        <td>Comma-separated tags to exclude; wins over <code>--tags</code></td>
+       </tr>
+       <tr>
+        <td><code>--serverTags</code>, <code>--serverExcludeTags</code></td>
+        <td>none</td>
+        <td>Server-only tag overrides</td>
+       </tr>
+       <tr>
+        <td><code>--clientTags</code>, <code>--clientExcludeTags</code></td>
+        <td>none</td>
+        <td>Client-only tag overrides</td>
+       </tr>
+       <tr>
+        <td><code>--url</code></td>
+        <td><code>openapi.json</code></td>
+        <td>OpenAPI URL/path, JSON Schema file, or JSON Schema directory</td>
+       </tr>
+       <tr>
+        <td><code>--baseFolder</code></td>
+        <td><code>src/main/scala</code></td>
+        <td>Generated source directory</td>
+       </tr>
+       <tr>
+        <td><code>--basePackage</code></td>
+        <td>required</td>
+        <td>Package for generated sources</td>
+       </tr>
+      </tbody>
+     </table>
+     <p>Generated sources land below <code>&lt;baseFolder&gt;/&lt;basePackage path&gt;/</code> in <code>models</code>, <code>controllers</code>, <code>routes</code> and <code>clients</code>, depending on the selected backends.</p>
+     <h2 id="snapshots">Snapshots<a href="#snapshots" class="flatmark-anchor" aria-label="Anchor"> 🔗</a></h2>
+     <p>Add <code>https://central.sonatype.com/repository/maven-snapshots</code> as a repository, then launch the snapshot explicitly:</p>
+     <pre><code class="language-shell hljs" data-highlighted="yes">cs launch --scala-version 2.13.16 \
+  -r https://central.sonatype.com/repository/maven-snapshots \
+  ba.sake::openapi4s-cli:0.9.1-SNAPSHOT \
+  -M ba.sake.openapi4s.cli.OpenApi4sMain -- --help
+</code></pre>
+     <p>Use the snapshot version reported by the main-branch CI job. Tagged releases are published to Maven Central.</p>
+    </div>
+    <aside aria-label="On this page">
+     <details open>
+      <summary>On this page</summary>
+      <nav aria-label="Table of contents">
+       <ul>
+        <li><a href="#cli">CLI</a>
+         <ul>
+          <li><a href="#snapshots">Snapshots</a></li>
+         </ul></li>
+       </ul>
+      </nav>
+     </details>
+    </aside>
+   </div>
+  </main>
+  <footer class="pico container site-footer">
+   <span><strong>OpenAPI4s</strong> — contract-first Scala 3 code generation</span> <a href="https://github.com/sake92/openapi4s">GitHub</a>
+  </footer>
+  <script>
+if (window.matchMedia('(max-width: 850px)').matches) {
+    document.querySelectorAll('body > main > div > aside > details').forEach(details => { details.open = false; });
+}
+</script>
+  <script src="https://sake92.github.io/openapi4s/scripts/code-copy.js"></script>
+ </body>
+</html>

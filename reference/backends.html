@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Compatible model, server, validation and client backends">
+  <title>Backends and dependencies | OpenAPI4s Documentation</title>
+  <link rel="icon" href="https://sake92.github.io/openapi4s/images/favicon.svg" type="image/svg+xml">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/a11y-dark.min.css" media="(prefers-color-scheme: dark)" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/a11y-light.min.css" media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.conditional.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://sake92.github.io/openapi4s/styles/default.css">
+ </head>
+ <body>
+  <header class="pico container">
+   <nav aria-label="Main navigation">
+    <a href="https://sake92.github.io/openapi4s/">OpenAPI4s Documentation</a>
+    <div>
+     <a href="https://sake92.github.io/openapi4s/tutorials">Tutorials</a> <a href="https://sake92.github.io/openapi4s/howtos">How-Tos</a> <a href="https://sake92.github.io/openapi4s/reference">Reference</a> <a href="https://sake92.github.io/openapi4s/explanation">Explanation</a>
+    </div>
+    <form action="https://sake92.github.io/openapi4s/search/results.html" method="get" role="search">
+     <input name="q" type="search" placeholder="Search" aria-label="Search this site">
+    </form>
+   </nav>
+  </header>
+  <script>
+for (const link of document.querySelectorAll('body > header > nav > div > a')) {
+    const path = new URL(link.href).pathname.replace(/\/$/, '');
+    const current = window.location.pathname;
+    if (current === path || current.startsWith(path + '/')) link.setAttribute('aria-current', 'page');
+}
+</script>
+  <main class="pico container">
+   <div>
+    <div class="content">
+     <h1 id="backends-and-dependencies">Backends and dependencies<a href="#backends-and-dependencies" class="flatmark-anchor" aria-label="Anchor"> 🔗</a></h1>
+     <p>Choose one model backend, an optional server backend, an optional validation backend and an optional client backend.</p>
+     <table>
+      <thead>
+       <tr>
+        <th>Purpose</th>
+        <th>Backend</th>
+        <th>Compatibility</th>
+       </tr>
+      </thead>
+      <tbody>
+       <tr>
+        <td>Models</td>
+        <td><code>circe</code></td>
+        <td>http4s, sttp and Iron</td>
+       </tr>
+       <tr>
+        <td>Models</td>
+        <td><code>tupson</code></td>
+        <td>Sharaf, sttp and Validson</td>
+       </tr>
+       <tr>
+        <td>Server</td>
+        <td><code>http4s</code></td>
+        <td>Use with Circe models</td>
+       </tr>
+       <tr>
+        <td>Server</td>
+        <td><code>sharaf</code></td>
+        <td>Use with Tupson models</td>
+       </tr>
+       <tr>
+        <td>Validation</td>
+        <td><code>iron</code></td>
+        <td>Use with Circe models</td>
+       </tr>
+       <tr>
+        <td>Validation</td>
+        <td><code>validson</code></td>
+        <td>Use with Tupson models</td>
+       </tr>
+       <tr>
+        <td>Client</td>
+        <td><code>sttp</code></td>
+        <td>Use with Circe or Tupson models</td>
+       </tr>
+      </tbody>
+     </table>
+     <p>Generated-code compilation is tested on Scala 3.9.0.</p>
+     <table>
+      <thead>
+       <tr>
+        <th>Generated code</th>
+        <th>Dependencies</th>
+       </tr>
+      </thead>
+      <tbody>
+       <tr>
+        <td>Tupson models</td>
+        <td><code>ba.sake::tupson:0.31.0</code>, <code>ba.sake::validson:0.20.0</code></td>
+       </tr>
+       <tr>
+        <td>Circe models</td>
+        <td><code>io.circe::circe-core:0.14.17</code>, <code>io.circe::circe-generic:0.14.17</code></td>
+       </tr>
+       <tr>
+        <td>Sharaf controllers</td>
+        <td><code>ba.sake::sharaf:0.9.3</code></td>
+       </tr>
+       <tr>
+        <td>http4s routes</td>
+        <td><code>org.http4s::http4s-dsl:0.23.38</code>, plus <code>http4s-circe</code> for Circe models</td>
+       </tr>
+       <tr>
+        <td>Iron validation</td>
+        <td><code>io.github.iltotore::iron:3.4.1</code>, <code>iron-circe:3.4.1</code></td>
+       </tr>
+       <tr>
+        <td>sttp clients</td>
+        <td><code>com.softwaremill.sttp.client4::core:4.1.0</code>, plus the selected JSON integration</td>
+       </tr>
+      </tbody>
+     </table>
+     <p>The <a href="https://github.com/sake92/mill-openapi4s">Mill plugin</a> and <a href="https://github.com/sake92/sbt-openapi4s">sbt plugin</a> expose equivalent build settings.</p>
+    </div>
+    <aside aria-label="On this page">
+     <details open>
+      <summary>On this page</summary>
+      <nav aria-label="Table of contents">
+       <ul>
+        <li><a href="#backends-and-dependencies">Backends and dependencies</a></li>
+       </ul>
+      </nav>
+     </details>
+    </aside>
+   </div>
+  </main>
+  <footer class="pico container site-footer">
+   <span><strong>OpenAPI4s</strong> — contract-first Scala 3 code generation</span> <a href="https://github.com/sake92/openapi4s">GitHub</a>
+  </footer>
+  <script>
+if (window.matchMedia('(max-width: 850px)').matches) {
+    document.querySelectorAll('body > main > div > aside > details').forEach(details => { details.open = false; });
+}
+</script>
+  <script src="https://sake92.github.io/openapi4s/scripts/code-copy.js"></script>
+ </body>
+</html>

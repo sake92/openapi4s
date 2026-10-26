@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Generate constrained Scala types and expose the routes from an application">
+  <title>Generate an http4s API with Iron | OpenAPI4s Documentation</title>
+  <link rel="icon" href="https://sake92.github.io/openapi4s/images/favicon.svg" type="image/svg+xml">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/a11y-dark.min.css" media="(prefers-color-scheme: dark)" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/a11y-light.min.css" media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.conditional.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://sake92.github.io/openapi4s/styles/default.css">
+ </head>
+ <body>
+  <header class="pico container">
+   <nav aria-label="Main navigation">
+    <a href="https://sake92.github.io/openapi4s/">OpenAPI4s Documentation</a>
+    <div>
+     <a href="https://sake92.github.io/openapi4s/tutorials">Tutorials</a> <a href="https://sake92.github.io/openapi4s/howtos">How-Tos</a> <a href="https://sake92.github.io/openapi4s/reference">Reference</a> <a href="https://sake92.github.io/openapi4s/explanation">Explanation</a>
+    </div>
+    <form action="https://sake92.github.io/openapi4s/search/results.html" method="get" role="search">
+     <input name="q" type="search" placeholder="Search" aria-label="Search this site">
+    </form>
+   </nav>
+  </header>
+  <script>
+for (const link of document.querySelectorAll('body > header > nav > div > a')) {
+    const path = new URL(link.href).pathname.replace(/\/$/, '');
+    const current = window.location.pathname;
+    if (current === path || current.startsWith(path + '/')) link.setAttribute('aria-current', 'page');
+}
+</script>
+  <main class="pico container">
+   <div>
+    <div class="content">
+     <h1 id="generate-an-http4s-api-with-iron">Generate an http4s API with Iron<a href="#generate-an-http4s-api-with-iron" class="flatmark-anchor" aria-label="Anchor"> 🔗</a></h1>
+     <p>Use Circe models with the http4s server backend and Iron validation:</p>
+     <pre><code class="language-shell hljs" data-highlighted="yes">cs launch --scala-version 2.13.16 ba.sake::openapi4s-cli:0.9.0 \
+  -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
+  --models circe \
+  --framework http4s \
+  --validation iron \
+  --url openapi.yaml \
+  --baseFolder src/main/scala \
+  --basePackage com.example.api
+</code></pre>
+     <p>Add the generated-code dependencies to your application:</p>
+     <pre><code class="language-scala hljs" data-highlighted="yes"><span class="hljs-comment">//&gt;</span> <span class="hljs-keyword">using</span> <span class="hljs-type">scala</span> <span class="hljs-string">3.9.0</span>
+<span class="hljs-comment">//&gt;</span> <span class="hljs-keyword">using</span> <span class="hljs-type">dep</span> <span class="hljs-string">org.http4s::http4s-ember-server:0.23.38</span>
+<span class="hljs-comment">//&gt;</span> <span class="hljs-keyword">using</span> <span class="hljs-type">dep</span> <span class="hljs-string">org.http4s::http4s-dsl:0.23.38</span>
+<span class="hljs-comment">//&gt;</span> <span class="hljs-keyword">using</span> <span class="hljs-type">dep</span> <span class="hljs-string">org.http4s::http4s-circe:0.23.38</span>
+<span class="hljs-comment">//&gt;</span> <span class="hljs-keyword">using</span> <span class="hljs-type">dep</span> <span class="hljs-string">io.circe::circe-generic:0.14.17</span>
+<span class="hljs-comment">//&gt;</span> <span class="hljs-keyword">using</span> <span class="hljs-type">dep</span> <span class="hljs-string">io.github.iltotore::iron:3.4.1</span>
+<span class="hljs-comment">//&gt;</span> <span class="hljs-keyword">using</span> <span class="hljs-type">dep</span> <span class="hljs-string">io.github.iltotore::iron-circe:3.4.1</span>
+</code></pre>
+     <p>Implement the <code>???</code> bodies in the generated routes, then mount them in your server:</p>
+     <pre><code class="language-scala hljs" data-highlighted="yes"><span class="hljs-keyword">import</span> cats.effect.{<span class="hljs-type">IO</span>, <span class="hljs-type">IOApp</span>}
+<span class="hljs-keyword">import</span> com.comcast.ip4s.*
+<span class="hljs-keyword">import</span> com.example.api.routes.<span class="hljs-type">UsersRoutes</span>
+<span class="hljs-keyword">import</span> org.http4s.ember.server.<span class="hljs-type">EmberServerBuilder</span>
+<span class="hljs-keyword">import</span> org.http4s.implicits.*
+<span class="hljs-keyword">import</span> org.http4s.server.middleware.<span class="hljs-type">ErrorHandling</span>
+
+<span class="hljs-class"><span class="hljs-keyword">object</span> <span class="hljs-title">Main</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">IOApp</span>.<span class="hljs-title">Simple</span></span>:
+  <span class="hljs-keyword">val</span> run: <span class="hljs-type">IO</span>[<span class="hljs-type">Unit</span>] =
+    <span class="hljs-keyword">val</span> routes = <span class="hljs-type">ErrorHandling</span>.httpRoutes[<span class="hljs-type">IO</span>](<span class="hljs-keyword">new</span> <span class="hljs-type">UsersRoutes</span>().routes)
+    <span class="hljs-type">EmberServerBuilder</span>
+      .<span class="hljs-keyword">default</span>[<span class="hljs-type">IO</span>]
+      .withHost(<span class="hljs-string">host"127.0.0.1"</span>)
+      .withPort(<span class="hljs-string">port"8080"</span>)
+      .withHttpApp(routes.orNotFound)
+      .build
+      .useForever
+</code></pre>
+     <p>Iron constraints are enforced while Circe decodes the request body. Invalid JSON is a <code>400 Bad Request</code>; structurally valid JSON that violates an Iron constraint is a <code>422 Unprocessable Entity</code>. The generated error handling supplies those client-facing responses.</p>
+     <p>Generated query matchers follow http4s route semantics: a missing required or malformed query parameter does not match the route and normally results in <code>404 Not Found</code>.</p>
+     <div role="group">
+      <span></span> <span></span> <a role="button" href="https://sake92.github.io/openapi4s/howtos/incremental-regeneration.html">Regenerate an evolving API ➡️</a>
+     </div>
+    </div>
+    <aside aria-label="On this page">
+     <details open>
+      <summary>On this page</summary>
+      <nav aria-label="Table of contents">
+       <ul>
+        <li><a href="#generate-an-http4s-api-with-iron">Generate an http4s API with Iron</a></li>
+       </ul>
+      </nav>
+     </details>
+    </aside>
+   </div>
+  </main>
+  <footer class="pico container site-footer">
+   <span><strong>OpenAPI4s</strong> — contract-first Scala 3 code generation</span> <a href="https://github.com/sake92/openapi4s">GitHub</a>
+  </footer>
+  <script>
+if (window.matchMedia('(max-width: 850px)').matches) {
+    document.querySelectorAll('body > main > div > aside > details').forEach(details => { details.open = false; });
+}
+</script>
+  <script src="https://sake92.github.io/openapi4s/scripts/code-copy.js"></script>
+ </body>
+</html>
