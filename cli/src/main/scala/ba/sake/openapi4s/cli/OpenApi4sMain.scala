@@ -15,7 +15,10 @@ object OpenApi4sMain {
       framework: Option[String] = None,
       @arg(doc = "Client backend: 'sttp'. If unset, no client is generated.")
       client: Option[String] = None,
-      @arg(doc = "OpenAPI URL/file path, or a local JSON Schema .json file/directory. Default is 'openapi.json'")
+      @arg(
+        doc =
+          "OpenAPI URL/file path, or a JSON Schema HTTP(S) URL/.json file/.json directory. Default is 'openapi.json'"
+      )
       url: String = "openapi.json",
       @arg(doc = "Base folder for generated sources. Default is 'src/main/scala'")
       baseFolder: String = "src/main/scala",
@@ -86,7 +89,7 @@ object OpenApi4sMain {
     val m = models.toLowerCase match {
       case "circe"  => "circe"
       case "tupson" => "tupson"
-      case "none" =>
+      case "none"   =>
         throw new RuntimeException(
           "Invalid --models value 'none'. Models are mandatory; use 'circe' or 'tupson'."
         )
@@ -100,7 +103,7 @@ object OpenApi4sMain {
       case None           => "none"
       case Some("http4s") => "http4s"
       case Some("sharaf") => "sharaf"
-      case Some("none") =>
+      case Some("none")   =>
         throw new RuntimeException(
           "Invalid --framework value 'none'. To generate no server, omit --framework entirely. Available server frameworks: 'http4s', 'sharaf'."
         )

@@ -1,8 +1,8 @@
 # OpenAPI4s
 
 OpenAPI4s generates idiomatic Scala 3 models, HTTP server routes, clients, and
-validators from OpenAPI 3.0/3.1 specifications. It also supports local JSON
-Schema files and directories for model generation.
+validators from OpenAPI 3.0/3.1 specifications. It also supports plain JSON
+Schemas for model generation.
 
 [![CI](https://github.com/sake92/openapi4s/actions/workflows/ci.yml/badge.svg)](https://github.com/sake92/openapi4s/actions/workflows/ci.yml)
 

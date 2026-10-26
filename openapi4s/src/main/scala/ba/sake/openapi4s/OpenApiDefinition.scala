@@ -26,10 +26,15 @@ case class OpenApiDefinition(
 
 object OpenApiDefinition extends LazyLogging {
 
-  def parse(url: String): OpenApiDefinition = {
-    if (JsonSchemaDefinition.isInput(url)) JsonSchemaDefinition.parse(url)
-    else parseOpenApi(url)
-  }
+  private[openapi4s] case class ParsedInput(definition: OpenApiDefinition, isJsonSchema: Boolean)
+
+  def parse(url: String): OpenApiDefinition = parseInput(url).definition
+
+  private[openapi4s] def parseInput(url: String): ParsedInput =
+    JsonSchemaDefinition.tryParse(url) match {
+      case Some(definition) => ParsedInput(definition, isJsonSchema = true)
+      case None             => ParsedInput(parseOpenApi(url), isJsonSchema = false)
+    }
 
   def isJsonSchemaInput(url: String): Boolean = JsonSchemaDefinition.isInput(url)
 

@@ -7,7 +7,7 @@ pagination:
 
 # {{ page.title }}
 
-Generate idiomatic Scala 3 models, validation types, HTTP server routes and clients from OpenAPI or JSON Schema files.
+Generate idiomatic Scala 3 models, validation types, HTTP server routes and clients from OpenAPI or JSON Schema documents.
 
 Use OpenAPI4s with the [CLI](/reference/cli.html) or integrate generation into your build with a plugin:
 

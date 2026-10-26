@@ -17,7 +17,7 @@ All runs generate models. Add `--framework` for a server or `--client` for a cli
 | `--excludeTags` | none | Comma-separated tags to exclude; wins over `--tags` |
 | `--serverTags`, `--serverExcludeTags` | none | Server-only tag overrides |
 | `--clientTags`, `--clientExcludeTags` | none | Client-only tag overrides |
-| `--url` | `openapi.json` | OpenAPI URL/path, JSON Schema file, or JSON Schema directory |
+| `--url` | `openapi.json` | OpenAPI URL/path, JSON Schema HTTP(S) URL, file, or directory |
 | `--baseFolder` | `src/main/scala` | Generated source directory |
 | `--basePackage` | required | Package for generated sources |
 

@@ -92,6 +92,13 @@ class JsonSchemaDefinitionSuite extends munit.FunSuite {
     )
   }
 
+  test("rejects a directory without JSON schema files") {
+    val folder = Files.createTempDirectory("json-schema-empty")
+    interceptMessage[RuntimeException](s"JSON Schema input '$folder' contains no .json schema files.") {
+      JsonSchemaDefinition.parse(folder.toString)
+    }
+  }
+
   test("rejects component collisions that remain after qualification") {
     val folder = Files.createTempDirectory("json-schema-name-conflict")
     Files.writeString(

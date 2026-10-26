@@ -7,14 +7,30 @@ import ba.sake.regenesca.{GeneratedFileSource, RegenescaGenerator, SourceMerger}
 import scala.meta.contrib.implicits.TreeExtensions
 import scala.meta.dialects.Scala34
 
-class OpenApiWriter(
+class OpenApiWriter private (
     config: OpenApiWriter.Config,
     modelBackend: ModelBackend,
     frameworkBackend: FrameworkBackend,
     validationBackend: ValidationBackend,
-    clientBackend: ClientBackend
+    clientBackend: ClientBackend,
+    private val openapiDefinition: OpenApiDefinition
 ) extends LazyLogging {
-  private val openapiDefinition = OpenApiDefinition.parse(config.url)
+
+  def this(
+      config: OpenApiWriter.Config,
+      modelBackend: ModelBackend,
+      frameworkBackend: FrameworkBackend,
+      validationBackend: ValidationBackend,
+      clientBackend: ClientBackend
+  ) = this(
+    config,
+    modelBackend,
+    frameworkBackend,
+    validationBackend,
+    clientBackend,
+    OpenApiDefinition.parse(config.url)
+  )
+
   private val merger = SourceMerger(mergeDefBodies = true)
   private val regenescaGenerator = RegenescaGenerator(merger)
 
@@ -68,11 +84,10 @@ object OpenApiWriter extends LazyLogging {
       )
     }
 
-    if (
-      OpenApiDefinition.isJsonSchemaInput(
-        config.url
-      ) && (frameworkId != FrameworkBackendId.NoFramework || clientId != ClientBackendId.NoClient)
-    ) {
+    val parsedInput = OpenApiDefinition.parseInput(config.url)
+    val generatesServerOrClient =
+      frameworkId != FrameworkBackendId.NoFramework || clientId != ClientBackendId.NoClient
+    if (parsedInput.isJsonSchema && generatesServerOrClient) {
       throw new RuntimeException(
         "JSON Schema input supports model generation only; omit --framework and --client."
       )
@@ -108,7 +123,14 @@ object OpenApiWriter extends LazyLogging {
       )
     }
 
-    new OpenApiWriter(config, modelBackend, frameworkBackend, validationBackend, clientBackend)
+    new OpenApiWriter(
+      config,
+      modelBackend,
+      frameworkBackend,
+      validationBackend,
+      clientBackend,
+      parsedInput.definition
+    )
   }
 
   case class Config(
