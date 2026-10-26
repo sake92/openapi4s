@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Generate Scala 3 models from a JSON Schema file or directory">
+  <title>Generate models from JSON Schema | OpenAPI4s Documentation</title>
+  <link rel="icon" href="https://sake92.github.io/openapi4s/images/favicon.svg" type="image/svg+xml">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/a11y-dark.min.css" media="(prefers-color-scheme: dark)" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/a11y-light.min.css" media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.conditional.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://sake92.github.io/openapi4s/styles/default.css">
+ </head>
+ <body>
+  <header class="pico container">
+   <nav aria-label="Main navigation">
+    <a href="https://sake92.github.io/openapi4s/">OpenAPI4s Documentation</a>
+    <div>
+     <a href="https://sake92.github.io/openapi4s/tutorials">Tutorials</a> <a href="https://sake92.github.io/openapi4s/howtos">How-Tos</a> <a href="https://sake92.github.io/openapi4s/reference">Reference</a> <a href="https://sake92.github.io/openapi4s/explanation">Explanation</a>
+    </div>
+    <form action="https://sake92.github.io/openapi4s/search/results.html" method="get" role="search">
+     <input name="q" type="search" placeholder="Search" aria-label="Search this site">
+    </form>
+   </nav>
+  </header>
+  <script>
+for (const link of document.querySelectorAll('body > header > nav > div > a')) {
+    const path = new URL(link.href).pathname.replace(/\/$/, '');
+    const current = window.location.pathname;
+    if (current === path || current.startsWith(path + '/')) link.setAttribute('aria-current', 'page');
+}
+</script>
+  <main class="pico container">
+   <div>
+    <div class="content">
+     <h1 id="generate-models-from-json-schema">Generate models from JSON Schema<a href="#generate-models-from-json-schema" class="flatmark-anchor" aria-label="Anchor"> 🔗</a></h1>
+     <p>Pass a JSON Schema file to the CLI and choose the model backend you use in your application:</p>
+     <pre><code class="language-shell hljs" data-highlighted="yes">cs launch --scala-version 2.13.16 ba.sake::openapi4s-cli:0.9.0 \
+  -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
+  --models circe \
+  --url schemas/person.json \
+  --baseFolder src/main/scala \
+  --basePackage com.example.models
+</code></pre>
+     <p>The generated models are written below <code>src/main/scala/com/example/models/models</code>. Use <code>--models tupson</code> instead when your application uses Tupson.</p>
+     <p>To generate from a collection of schemas, point <code>--url</code> at its directory:</p>
+     <pre><code class="language-shell hljs" data-highlighted="yes">cs launch --scala-version 2.13.16 ba.sake::openapi4s-cli:0.9.0 \
+  -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
+  --models circe \
+  --url schemas/ \
+  --baseFolder src/main/scala \
+  --basePackage com.example.models
+</code></pre>
+     <p>The directory is walked recursively and every <code>.json</code> file is treated as a schema document. Keep only JSON Schema documents in that tree. Relative <code>$ref</code> values may point to another schema in the tree:</p>
+     <pre><code class="language-json hljs" data-highlighted="yes"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">"title"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Customer"</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">"type"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"object"</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">"required"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">"address"</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">"properties"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"address"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">"$ref"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"address.json"</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+     <p>Give each top-level schema a unique <code>title</code>; otherwise its filename becomes the model name. Definitions in <code>$defs</code> are generated as additional models.</p>
+     <p>JSON Schema input generates models only. Do not pass <code>--framework</code> or <code>--client</code>; those options require an OpenAPI document. For an HTTP(S) schema URL, OpenAPI4s fetches schemas without authentication and remote schemas may reference only HTTP(S) schemas. See the <a href="https://sake92.github.io/openapi4s/reference/limitations.html">limitations reference</a> for the current boundary.</p>
+     <div role="group">
+      <span></span> <span></span> <a role="button" href="https://sake92.github.io/openapi4s/howtos/http4s-iron.html">Generate an http4s API with Iron ➡️</a>
+     </div>
+    </div>
+    <aside aria-label="On this page">
+     <details open>
+      <summary>On this page</summary>
+      <nav aria-label="Table of contents">
+       <ul>
+        <li><a href="#generate-models-from-json-schema">Generate models from JSON Schema</a></li>
+       </ul>
+      </nav>
+     </details>
+    </aside>
+   </div>
+  </main>
+  <footer class="pico container site-footer">
+   <span><strong>OpenAPI4s</strong> — contract-first Scala 3 code generation</span> <a href="https://github.com/sake92/openapi4s">GitHub</a>
+  </footer>
+  <script>
+if (window.matchMedia('(max-width: 850px)').matches) {
+    document.querySelectorAll('body > main > div > aside > details').forEach(details => { details.open = false; });
+}
+</script>
+  <script src="https://sake92.github.io/openapi4s/scripts/code-copy.js"></script>
+ </body>
+</html>
