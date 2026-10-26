@@ -1,0 +1,31 @@
+name: OpenAPI4s
+
+gh:
+  handle: "sake92"
+  projectName: "openapi4s"
+  url: "https://github.com/sake92/openapi4s"
+  sourcesUrl: "https://github.com/sake92/openapi4s/tree/main"
+
+artifact:
+  org: "ba.sake"
+  name: "openapi4s-cli"
+  version: "0.9.0"
+
+tutorials:
+  - label: "Quickstart"
+    url: "/tutorials/quickstart.html"
+howtos:
+  - label: "Generate an http4s API with Iron"
+    url: "/howtos/http4s-iron.html"
+  - label: "Regenerate an evolving API"
+    url: "/howtos/incremental-regeneration.html"
+references:
+  - label: "CLI"
+    url: "/reference/cli.html"
+  - label: "Backends and dependencies"
+    url: "/reference/backends.html"
+  - label: "Limitations"
+    url: "/reference/limitations.html"
+explanations:
+  - label: "Why OpenAPI4s?"
+    url: "/explanation/why-openapi4s.html"
