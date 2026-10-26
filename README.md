@@ -149,6 +149,10 @@ Openapi4s is a matrix of independent backends — pick one model backend, one se
 > first one that parses. For overlapping object shapes use a `discriminator` in
 > your `oneOf` to get a sealed trait instead.
 
+Circe models honor explicit `discriminator.mapping` values, such as `cat` → `Cat`,
+with schema names as the default for unmapped cases. Mapping several wire values
+to the same case is currently unsupported and fails generation with an error.
+
 ### Server backends
 
 | Feature | `sharaf` | `http4s` |

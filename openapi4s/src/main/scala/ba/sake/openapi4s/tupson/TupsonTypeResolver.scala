@@ -24,12 +24,12 @@ object TupsonTypeResolver extends LazyLogging {
       val core =
         resolveType(arr.schema, propertyName, parentTypeName, allowNullable = allowNullable, context, fallbackAnyType)
       if (arr.uniqueItems) t"Set[$core]" else t"Seq[$core]"
-    case obj: SchemaDefinition.Obj          => namedTupleType(obj, context, fallbackAnyType)
-    case e: SchemaDefinition.Enum           => literalUnionType(e.values.map(v => Lit.String(v): Lit))
-    case e: SchemaDefinition.EnumLiterals   => literalUnionType(e.values.map(toLit))
-    case c: SchemaDefinition.Const          => toLit(c.value)
-    case SchemaDefinition.OneOf(schemas, _) => unionType(schemas, context, fallbackAnyType)
-    case SchemaDefinition.AnyOf(schemas)    => unionType(schemas, context, fallbackAnyType)
+    case obj: SchemaDefinition.Obj               => namedTupleType(obj, context, fallbackAnyType)
+    case e: SchemaDefinition.Enum                => literalUnionType(e.values.map(v => Lit.String(v): Lit))
+    case e: SchemaDefinition.EnumLiterals        => literalUnionType(e.values.map(toLit))
+    case c: SchemaDefinition.Const               => toLit(c.value)
+    case oneOf: SchemaDefinition.OneOf           => unionType(oneOf.schemas, context, fallbackAnyType)
+    case SchemaDefinition.AnyOf(schemas)         => unionType(schemas, context, fallbackAnyType)
     case SchemaDefinition.MapObj(valueSchemaOpt) =>
       valueSchemaOpt match {
         case Some(vs) =>
@@ -96,7 +96,7 @@ object TupsonTypeResolver extends LazyLogging {
         resolved match {
           case Nil      => fallbackAnyType
           case h :: Nil => h
-          case many =>
+          case many     =>
             many.reduceLeft[Type] { (acc, tpe) => t"$acc | $tpe" }
         }
     }

@@ -97,10 +97,10 @@ private[openapi4s] object SchemaNormalizer {
       case all: SchemaDefinition.AllOf => all
       case SchemaDefinition.Obj(props) => SchemaDefinition.Obj(props.map(p => p.copy(schema = visit(p.schema))))
       case SchemaDefinition.Opt(inner) => SchemaDefinition.optional(visit(inner))
-      case SchemaDefinition.Arr(inner, min, max, unique)  => SchemaDefinition.Arr(visit(inner), min, max, unique)
-      case SchemaDefinition.AnyOf(members)                => SchemaDefinition.AnyOf(members.map(visit))
-      case SchemaDefinition.OneOf(members, discriminator) => SchemaDefinition.OneOf(members.map(visit), discriminator)
-      case other                                          => other
+      case SchemaDefinition.Arr(inner, min, max, unique) => SchemaDefinition.Arr(visit(inner), min, max, unique)
+      case SchemaDefinition.AnyOf(members)               => SchemaDefinition.AnyOf(members.map(visit))
+      case oneOf: SchemaDefinition.OneOf                 => oneOf.copy(schemas = oneOf.schemas.map(visit))
+      case other                                         => other
     }
     visit(schema)
   }

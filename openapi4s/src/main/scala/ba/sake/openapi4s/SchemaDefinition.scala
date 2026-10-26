@@ -31,8 +31,11 @@ object SchemaDefinition {
   case class Const(value: EnumLiteral, default: Option[String]) extends NameableSchemaDefinition
   case class Arr(schema: SchemaDefinition, minItems: Option[Int], maxItems: Option[Int], uniqueItems: Boolean)
       extends NameableSchemaDefinition
-  case class OneOf(schemas: List[SchemaDefinition], discriminatorPropertyName: Option[String])
-      extends NameableSchemaDefinition
+  case class OneOf(
+      schemas: List[SchemaDefinition],
+      discriminatorPropertyName: Option[String],
+      discriminatorMapping: Map[String, String] = Map.empty
+  ) extends NameableSchemaDefinition
   case class AnyOf(schemas: List[SchemaDefinition]) extends NameableSchemaDefinition
   case class AllOf(schemas: List[SchemaDefinition]) extends NameableSchemaDefinition
   case class MapObj(valueSchema: Option[SchemaDefinition]) extends NameableSchemaDefinition
