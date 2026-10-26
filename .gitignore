@@ -9,10 +9,12 @@ target/
 .metals/
 .bsp/
 .vscode/
+.basamake/
 
 out/
 
 .scala-build/
+.scalex/
 
 .deder/
 
