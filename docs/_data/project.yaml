@@ -15,6 +15,8 @@ tutorials:
   - label: "Quickstart"
     url: "/tutorials/quickstart.html"
 howtos:
+  - label: "Generate models from JSON Schema"
+    url: "/howtos/generate-json-schema-models.html"
   - label: "Generate an http4s API with Iron"
     url: "/howtos/http4s-iron.html"
   - label: "Regenerate an evolving API"
