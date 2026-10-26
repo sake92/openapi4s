@@ -32,15 +32,7 @@ class IncrementalGenerationSuite extends munit.FunSuite {
     val folder = Files.createTempDirectory("openapi4s-incremental-body")
     generate(folder)
     val routes = folder.resolve("example/routes/UsersRoutes.scala")
-    Files.writeString(
-      routes,
-      Files
-        .readString(routes)
-        .replace(
-          "reqBody <- req.as[User]; resp <- NotImplemented(\"TODO: return User\")",
-          "reqBody <- req.as[User]; resp <- Created(reqBody)"
-        )
-    )
+    Files.writeString(routes, implementPost(Files.readString(routes)))
 
     generate(folder, requestType = "NewUser")
     val updated = Files.readString(routes)
@@ -72,15 +64,7 @@ class IncrementalGenerationSuite extends munit.FunSuite {
     val folder = Files.createTempDirectory("openapi4s-incremental-runtime")
     generate(folder)
     val routes = folder.resolve("example/routes/UsersRoutes.scala")
-    Files.writeString(
-      routes,
-      Files
-        .readString(routes)
-        .replace(
-          "reqBody <- req.as[User]; resp <- NotImplemented(\"TODO: return User\")",
-          "reqBody <- req.as[User]; resp <- Created(reqBody)"
-        )
-    )
+    Files.writeString(routes, implementPost(Files.readString(routes)))
     generate(folder, includeList = true, requestType = "NewUser", minimumAge = 18)
     val check = getClass.getResourceAsStream("/http4s_incremental_check.scala")
     try Files.copy(check, folder.resolve("IncrementalCheck.scala"), StandardCopyOption.REPLACE_EXISTING)
@@ -102,6 +86,18 @@ class IncrementalGenerationSuite extends munit.FunSuite {
 
   private def occurrences(source: String, text: String): Int =
     source.sliding(text.length).count(_ == text)
+
+  /** Implements the POST /users handler, leaving the other generated routes untouched. Independent of how the
+    * for-comprehension qualifiers are laid out (single line or one per line).
+    */
+  private def implementPost(source: String): String = {
+    val postIndex = source.indexOf("POST -> Root / \"users\"")
+    assert(postIndex >= 0, s"POST route not found in generated source:\n$source")
+    val todo = "NotImplemented(\"TODO: return User\")"
+    val todoIndex = source.indexOf(todo, postIndex)
+    assert(todoIndex >= 0, s"POST TODO response not found in generated source:\n$source")
+    source.substring(0, todoIndex) + "Created(reqBody)" + source.substring(todoIndex + todo.length)
+  }
 
   private def generate(
       folder: Path,
