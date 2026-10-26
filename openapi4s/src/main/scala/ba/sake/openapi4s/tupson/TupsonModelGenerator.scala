@@ -19,13 +19,6 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
 
   override def generate(): Seq[GeneratedFileSource] = {
     val modelsPkg = generatePkgSelect(s"${config.basePackage}.models")
-    val modelImports = List[Import](
-      q"import java.time.*",
-      q"import java.util.UUID",
-      q"import org.typelevel.jawn.ast.JValue",
-      q"import ba.sake.tupson.*",
-      q"import ba.sake.validson.Validator"
-    )
     val generatedFileNames = scala.collection.mutable.Set.empty[String]
     val modelFileSources = openApiDefinition.namedSchemaDefinitions.defs.flatMap { namedSchemaDef =>
       val namedSchemaName = namedSchemaDef.name.capitalize
@@ -34,6 +27,23 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
         None
       } else {
         val modelSources = generateModelSources(namedSchemaDef, None)
+        val referencedNames = modelSources
+          .flatMap(_.collect {
+            case Type.Name(name) => name
+            case Term.Name(name) => name
+          })
+          .toSet
+        val importCandidates = List(
+          Set("LocalDate") -> q"import java.time.LocalDate",
+          Set("Instant") -> q"import java.time.Instant",
+          Set("UUID") -> q"import java.util.UUID",
+          Set("JValue") -> q"import org.typelevel.jawn.ast.JValue",
+          Set("JsonRW", "discriminator") -> q"import ba.sake.tupson.*",
+          Set("Validator") -> q"import ba.sake.validson.Validator"
+        )
+        val modelImports = importCandidates.collect {
+          case (names, statement) if names.exists(referencedNames.contains) => statement
+        }
         val allStmts = modelImports ++ modelSources
         Option.when(modelSources.nonEmpty) {
           GeneratedFileSource(
@@ -65,7 +75,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
         val name = s"${namedSchemaName}__${path}"
         liftedModels += SchemaDefinition.Named(name, obj)
         SchemaDefinition.Ref(name)
-      case SchemaDefinition.Opt(inner) => SchemaDefinition.optional(liftOptionalObjects(inner, path))
+      case SchemaDefinition.Opt(inner)                   => SchemaDefinition.optional(liftOptionalObjects(inner, path))
       case SchemaDefinition.Arr(inner, min, max, unique) =>
         SchemaDefinition.Arr(liftOptionalObjects(inner, s"${path}__item"), min, max, unique)
       case SchemaDefinition.AnyOf(members) =>
@@ -131,7 +141,7 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
           case SchemaDefinition.Ref(refName) =>
             openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName) match {
               case Some(referencedNamedSchema) => generateModelSources(referencedNamedSchema, Some(typeName))
-              case None =>
+              case None                        =>
                 logger.warn(s"Non-existing sub-schema type: '${refName}' [${namedSchemaName}]")
                 None
             }
@@ -161,14 +171,14 @@ class TupsonModelGenerator(config: OpenApiWriter.Config, openApiDefinition: Open
           case SchemaDefinition.Ref(refName) =>
             openApiDefinition.namedSchemaDefinitions.defs.find(_.name == refName).map(_.schema)
           case obj: SchemaDefinition.Obj => Some(obj)
-          case other =>
+          case other                     =>
             logger.warn(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
             None
         }
         val mergedSchemasProps: List[SchemaProperty] = allOfCases
           .flatMap {
             case SchemaDefinition.Obj(props) => props
-            case other =>
+            case other                       =>
               logger.warn(s"Unsupported allOf sub-schema type: '${other.getClass}' [${namedSchemaName}]")
               List.empty
           }

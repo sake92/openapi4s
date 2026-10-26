@@ -44,6 +44,34 @@ class TupsonGeneratorSuite extends munit.FunSuite {
       s"free-form map not Map[String, JValue]:\n$withMapFile"
     )
 
+    assert(withMapFile.contains("import org.typelevel.jawn.ast.JValue"), withMapFile)
+    val freeFormFile = readGeneratedFile(baseFolder, "models/FreeForm.scala")
+    assert(freeFormFile.contains("type FreeForm = Map[String, JValue]"), freeFormFile)
+    assert(freeFormFile.contains("import org.typelevel.jawn.ast.JValue"), freeFormFile)
+    Seq("Container", "WithEnum", "WithIntEnum", "Animal", "Pet", "AnyThing", "Level", "Tags").foreach { name =>
+      val generated = readGeneratedFile(baseFolder, s"models/$name.scala")
+      assert(!generated.contains("import org.typelevel.jawn.ast.JValue"), generated)
+    }
+
+    Seq("Container", "WithMap", "FreeForm", "Pet", "Tags").foreach { name =>
+      val generated = readGeneratedFile(baseFolder, s"models/$name.scala")
+      assert(!generated.contains("import ba.sake.validson.Validator"), generated)
+      assert(!generated.contains("import java.time."), generated)
+      assert(!generated.contains("import java.util.UUID"), generated)
+    }
+    Seq("FreeForm", "Tags", "Level", "Animal", "AnyThing").foreach { name =>
+      val generated = readGeneratedFile(baseFolder, s"models/$name.scala")
+      assert(!generated.contains("import ba.sake.tupson.*"), generated)
+    }
+    assert(containerFile.contains("import ba.sake.tupson.*"), containerFile)
+    val validatedFile = readGeneratedFile(baseFolder, "models/WithValidation.scala")
+    assert(validatedFile.contains("import ba.sake.validson.Validator"), validatedFile)
+    assert(validatedFile.contains("given Validator[WithValidation]"), validatedFile)
+    val formatsFile = readGeneratedFile(baseFolder, "models/WithFormats.scala")
+    Seq("java.util.UUID", "java.time.LocalDate", "java.time.Instant").foreach { imported =>
+      assert(formatsFile.contains(s"import $imported"), formatsFile)
+    }
+
     // oneOf without discriminator -> type alias union; with discriminator -> sealed trait
     val animalFile = readGeneratedFile(baseFolder, "models/Animal.scala")
     assert(animalFile.contains("type Animal = Cat | Dog"), s"discriminator-less oneOf not a union alias:\n$animalFile")

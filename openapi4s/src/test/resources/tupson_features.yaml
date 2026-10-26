@@ -118,6 +118,9 @@ components:
       type: object
       additionalProperties:
         type: string
+    FreeForm:
+      type: object
+      additionalProperties: true
     Cat:
       type: object
       properties:
@@ -128,3 +131,24 @@ components:
       properties:
         bark:
           type: boolean
+    WithValidation:
+      type: object
+      required: [count]
+      properties:
+        count:
+          type: integer
+          format: int32
+          minimum: 1
+    WithFormats:
+      type: object
+      required: [id, date, timestamp]
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        timestamp:
+          type: string
+          format: date-time
