@@ -14,8 +14,8 @@ class JiraCompilationSuite extends munit.FunSuite {
     val baseFolder = generate("jira-cloud-v3.json", "com.example.jira")
     CompilationTestUtils.compileGenerated(
       baseFolder.resolve("com/example/jira"),
-      scalaVersion = "3.7.3",
-      dependencies = Seq("ba.sake::tupson:0.30.0", "ba.sake::validson:0.19.0")
+      scalaVersion = "3.9.0",
+      dependencies = Seq("ba.sake::tupson:0.31.0", "ba.sake::validson:0.20.0")
     )
   }
 

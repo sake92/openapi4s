@@ -193,16 +193,16 @@ Incompatible validation/model combos (e.g. `--models tupson --validation iron`) 
 
 ## Requirements
 
-Add the dependencies that the generated code needs to your own build:
+Add the dependencies that the generated code needs to your own build. Generated-code compilation tests run on Scala 3.9.0:
 
 | Generated | Requirements |
 |---|---|
-| `tupson` models | Scala 3.7+, `ivy"ba.sake::tupson:0.30.0"`, `ivy"ba.sake::validson:0.19.0"` |
-| `circe` models | Scala 3, `ivy"io.circe::circe-core:0.14.10"`, `ivy"io.circe::circe-generic:0.14.10"` |
+| `tupson` models | Scala 3.9+, `ivy"ba.sake::tupson:0.31.0"`, `ivy"ba.sake::validson:0.20.0"` |
+| `circe` models | Scala 3, `ivy"io.circe::circe-core:0.14.17"`, `ivy"io.circe::circe-generic:0.14.17"` |
 | `sharaf` controllers | `ivy"ba.sake::sharaf:0.9.3"` |
-| `http4s` routes | `ivy"org.http4s::http4s-dsl:0.23.x"` (with circe models also `ivy"org.http4s::http4s-circe:0.23.x"`) |
-| `iron` validation | `ivy"io.github.iltotore::iron:3.0.2"`, `ivy"io.github.iltotore::iron-circe:3.0.2"` |
-| `sttp` clients | `ivy"com.softwaremill.sttp.client4::core:4.0.26"` (with circe models also `ivy"com.softwaremill.sttp.client4::circe:4.0.26"`; with tupson models also `ivy"ba.sake::tupson-sttp:0.30.0"`) |
+| `http4s` routes | `ivy"org.http4s::http4s-dsl:0.23.38"` (with circe models also `ivy"org.http4s::http4s-circe:0.23.38"`) |
+| `iron` validation | Scala 3.9+, `ivy"io.github.iltotore::iron:3.4.1"`, `ivy"io.github.iltotore::iron-circe:3.4.1"` |
+| `sttp` clients | Scala 3.9+, `ivy"com.softwaremill.sttp.client4::core:4.1.0"` (with circe models also `ivy"com.softwaremill.sttp.client4::circe:4.1.0"`; with tupson models also `ivy"ba.sake::tupson-sttp:0.31.0"`) |
 
 ## Limitations
 

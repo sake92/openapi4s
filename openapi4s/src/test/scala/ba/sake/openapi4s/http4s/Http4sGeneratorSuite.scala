@@ -54,11 +54,11 @@ class Http4sGeneratorSuite extends munit.FunSuite {
     finally check.close()
     CompilationTestUtils.runGenerated(
       baseFolder,
-      scalaVersion = "3.7.3",
+      scalaVersion = "3.9.0",
       dependencies = Seq(
-        "org.http4s::http4s-dsl:0.23.35",
-        "org.http4s::http4s-circe:0.23.35",
-        "io.circe::circe-generic:0.14.10"
+        "org.http4s::http4s-dsl:0.23.38",
+        "org.http4s::http4s-circe:0.23.38",
+        "io.circe::circe-generic:0.14.17"
       ),
       mainClass = "QueryCheck"
     )

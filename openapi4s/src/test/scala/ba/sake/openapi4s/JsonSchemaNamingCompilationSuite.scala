@@ -27,11 +27,11 @@ class JsonSchemaNamingCompilationSuite extends munit.FunSuite {
       assert(!files.exists(_.startsWith("Artifact__")), files)
       assert(Files.readString(models.resolve("ExportGraph.scala")).contains("files: Seq[FileNode]"))
       val dependencies = if (backend == "tupson") {
-        Seq("ba.sake::tupson:0.30.0", "ba.sake::validson:0.19.0")
+        Seq("ba.sake::tupson:0.31.0", "ba.sake::validson:0.20.0")
       } else {
-        Seq("io.circe::circe-core:0.14.10", "io.circe::circe-generic:0.14.10", "ba.sake::validson:0.19.0")
+        Seq("io.circe::circe-core:0.14.17", "io.circe::circe-generic:0.14.17", "ba.sake::validson:0.20.0")
       }
-      CompilationTestUtils.compileGenerated(models, "3.7.3", dependencies)
+      CompilationTestUtils.compileGenerated(models, "3.9.0", dependencies)
     }
   }
 }

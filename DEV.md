@@ -2,7 +2,7 @@
 TODOs:
 - support default values
 - add more tests https://github.com/swagger-api/swagger-parser/blob/master/modules/swagger-parser-v3/src/test/resources
-- on release: bump README "Requirements" (Scala 3.7+, tupson >= 0.30.0, tupson-sttp for sttp clients)
+- on release: bump README "Requirements" (Scala 3.9+, tupson >= 0.31.0, tupson-sttp for sttp clients)
 - mill-openapi4s plugin: expose `--client` / `--tags` flags (separate repo)
 
 Build prerequisites: JDK 21+, [Deder](https://sake92.github.io/deder/), and `scala-cli`.

@@ -15,8 +15,8 @@ class TupsonCompilationSuite extends munit.FunSuite {
     val baseFolder = generate("tupson_features.yaml", "com.example.features")
     CompilationTestUtils.compileGenerated(
       baseFolder.resolve("com/example/features"),
-      scalaVersion = "3.7.3",
-      dependencies = Seq("ba.sake::tupson:0.30.0", "ba.sake::validson:0.19.0")
+      scalaVersion = "3.9.0",
+      dependencies = Seq("ba.sake::tupson:0.31.0", "ba.sake::validson:0.20.0")
     )
   }
 
@@ -24,8 +24,8 @@ class TupsonCompilationSuite extends munit.FunSuite {
     val baseFolder = generate("tupson_features_31.yaml", "com.example.const")
     CompilationTestUtils.compileGenerated(
       baseFolder.resolve("com/example/const"),
-      scalaVersion = "3.7.3",
-      dependencies = Seq("ba.sake::tupson:0.30.0", "ba.sake::validson:0.19.0")
+      scalaVersion = "3.9.0",
+      dependencies = Seq("ba.sake::tupson:0.31.0", "ba.sake::validson:0.20.0")
     )
   }
 
