@@ -41,7 +41,7 @@ for (const link of document.querySelectorAll('body > header > nav > div > a')) {
      <h1 id="limitations">Limitations<a href="#limitations" class="flatmark-anchor" aria-label="Anchor"> 🔗</a></h1>
      <ul>
       <li>Payload generation is JSON-only.</li>
-      <li>JSON Schema input is local and model-only. It may be one <code>.json</code> file or a directory of schemas.</li>
+      <li>JSON Schema input is model-only. It may be one <code>.json</code> file, a directory of schemas, or a single HTTP(S) URL. Remote schemas are fetched without authentication, resolve references against the document URL (not <code>$id</code>), and may only reference other HTTP(S) schemas.</li>
       <li>Incremental generation is additive; it does not automatically delete Scala code after contract removals or renames.</li>
       <li>http4s query parameters use typed DSL matchers. Unsupported decoder types such as UUIDs, dates and named enums receive one explicit <code>given QueryParamDecoder[T] = ???</code> to implement.</li>
       <li>Missing required or malformed http4s query parameters do not match the route, following http4s DSL behavior.</li>
