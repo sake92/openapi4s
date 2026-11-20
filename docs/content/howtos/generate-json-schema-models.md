@@ -9,7 +9,7 @@ description: Generate Scala 3 models from a JSON Schema file or directory
 Pass a JSON Schema file to the CLI and choose the model backend you use in your application:
 
 ```shell
-cs launch --scala-version 2.13.16 ba.sake::openapi4s-cli:0.9.0 \
+cs launch --scala-version 2.13.16 ba.sake::openapi4s-cli:0.10.0 \
   -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models circe \
   --url schemas/person.json \
@@ -22,7 +22,7 @@ The generated models are written below `src/main/scala/com/example/models/models
 To generate from a collection of schemas, point `--url` at its directory:
 
 ```shell
-cs launch --scala-version 2.13.16 ba.sake::openapi4s-cli:0.9.0 \
+cs launch --scala-version 2.13.16 ba.sake::openapi4s-cli:0.10.0 \
   -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models circe \
   --url schemas/ \

@@ -9,7 +9,7 @@ description: Generate constrained Scala types and expose the routes from an appl
 Use Circe models with the http4s server backend and Iron validation:
 
 ```shell
-cs launch --scala-version 2.13.16 ba.sake::openapi4s-cli:0.9.0 \
+cs launch --scala-version 2.13.16 ba.sake::openapi4s-cli:0.10.0 \
   -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models circe \
   --framework http4s \

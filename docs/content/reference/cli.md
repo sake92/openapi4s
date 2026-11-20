@@ -25,13 +25,13 @@ Generated sources land below `<baseFolder>/<basePackage path>/` in `models`, `co
 
 ## Snapshots
 
-Add `https://central.sonatype.com/repository/maven-snapshots` as a repository, then launch the snapshot explicitly:
+Set `SNAPSHOT_VERSION` to the version reported by the main-branch CI job, then launch it from the Maven snapshots repository.
 
 ```shell
 cs launch --scala-version 2.13.16 \
   -r https://central.sonatype.com/repository/maven-snapshots \
-  ba.sake::openapi4s-cli:0.9.1-SNAPSHOT \
+  "ba.sake::openapi4s-cli:${SNAPSHOT_VERSION}" \
   -M ba.sake.openapi4s.cli.OpenApi4sMain -- --help
 ```
 
-Use the snapshot version reported by the main-branch CI job. Tagged releases are published to Maven Central.
+Tagged releases are published to Maven Central.

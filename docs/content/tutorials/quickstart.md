@@ -52,7 +52,7 @@ components:
 ## 2. Run the generator
 
 ```shell
-cs launch --scala-version 2.13.16 ba.sake::openapi4s-cli:0.9.0 \
+cs launch --scala-version 2.13.16 ba.sake::openapi4s-cli:0.10.0 \
   -M ba.sake.openapi4s.cli.OpenApi4sMain -- \
   --models circe \
   --framework http4s \

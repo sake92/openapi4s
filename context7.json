@@ -1,0 +1,13 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "OpenAPI4s",
+  "description": "Generate Scala 3 models, HTTP server routes, clients, and validators from OpenAPI 3.0 or 3.1, or generate models from JSON Schema.",
+  "folders": ["docs/content"],
+  "rules": [
+    "Use Scala 3 for generated code. Launch the OpenAPI4s CLI with Scala 2.13 or use the OpenAPI4s plugin for the project's existing build tool.",
+    "Match the model backend to the application. Use Circe with http4s or Iron, and Tupson with Sharaf or Validson. The sttp client works with either model backend.",
+    "Use an OpenAPI document to generate server routes or clients. For standalone JSON Schema files, directories, or HTTP(S) URLs, generate models only and omit --framework and --client.",
+    "Regenerate into the same source folder and package to merge additive API changes while preserving handwritten method bodies. Review and remove obsolete Scala code after renames or removals.",
+    "Implement generated route bodies and any generated query decoder placeholders before deploying the server. Compile the generated sources with the application's backend dependencies."
+  ]
+}
