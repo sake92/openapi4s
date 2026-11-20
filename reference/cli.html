@@ -108,13 +108,13 @@ for (const link of document.querySelectorAll('body > header > nav > div > a')) {
      </table>
      <p>Generated sources land below <code>&lt;baseFolder&gt;/&lt;basePackage path&gt;/</code> in <code>models</code>, <code>controllers</code>, <code>routes</code> and <code>clients</code>, depending on the selected backends.</p>
      <h2 id="snapshots">Snapshots<a href="#snapshots" class="flatmark-anchor" aria-label="Anchor"> 🔗</a></h2>
-     <p>Add <code>https://central.sonatype.com/repository/maven-snapshots</code> as a repository, then launch the snapshot explicitly:</p>
+     <p>Set <code>SNAPSHOT_VERSION</code> to the version reported by the main-branch CI job, then launch it from the Maven snapshots repository.</p>
      <pre><code class="language-shell hljs" data-highlighted="yes">cs launch --scala-version 2.13.16 \
   -r https://central.sonatype.com/repository/maven-snapshots \
-  ba.sake::openapi4s-cli:0.9.1-SNAPSHOT \
+  "ba.sake::openapi4s-cli:${SNAPSHOT_VERSION}" \
   -M ba.sake.openapi4s.cli.OpenApi4sMain -- --help
 </code></pre>
-     <p>Use the snapshot version reported by the main-branch CI job. Tagged releases are published to Maven Central.</p>
+     <p>Tagged releases are published to Maven Central.</p>
     </div>
     <aside aria-label="On this page">
      <details open>
